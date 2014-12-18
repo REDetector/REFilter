@@ -1,0 +1,15 @@
+#Filter the project configuration file generated automatically by IDEA.
+*.iml
+.idea
+
+#Filter the result directory.
+Results/
+
+#Filter the output directory.
+out/
+
+#Filter META-INF directory.
+src/META-INF
+
+#Test file
+src/main.java
