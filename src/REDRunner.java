@@ -476,23 +476,46 @@ public class REDRunner {
     }
 
     public static String getHelp() {
-        return "\t-h, --help   \t\t\tPrint short help message and exit;\n" +
-                "\t--version \t\t\t\tPrint version info and exit;\n" +
+        return "Usage: java -jar jarfile [-h|--help] [-v|--version] [-H|--host[=127.0.0.1]] [-p|--port[=3306]] [-u|--user[=root]] [-P|--pwd[=root]] [-m|--mode[=dnarna]] [-i|--input] [-o|--output[=./]] [-e|--export[=all]] [--rnavcf] [--dnavcf] [--darned] [--splice] [--repeat] [--dbsnp]\n" +
+                "\n" +
+                "The most commonly used REFilters commands are:\n" +
+                "\t-h, --help   \t\t\tPrint short help message and exit;\n" +
+                "\t-v, --version \t\t\tPrint version info and exit;\n" +
                 "\t-H, --host=127.0.0.1    The host address of MySQL database;\n" +
                 "\t-p, --port=3306    \t\tThe port used in MySQL;\n" +
                 "\t-u, --user=root    \t\tMySQL user name;\n" +
                 "\t-P, --pwd=root     \t\tMySQL password of user;\n" +
-                "\t-m, --mode=dnarna  \t\t\tTell the program if it is denovo mode or DNARNA mode;\n" +
-                "\t-i, --input  \t\t\tInput all required files in order (i.e., RNA VCF File, DNA VCF File, DARNED Database, Gene Annotation File, RepeatMasker Database File, dbSNP Database File) instead of single input, each file should be divided with ',';\n" +
-                "\t-o, --output=./    \t\tSet export path for the results in database;\n" +
-                "\t-e, --export=all  \t\t\tExport the needed columns in database, which must be the column name of a table in database, the column names should be divided by ',';\n" +
+                "\t-m, --mode=dnarna  \t\tTell the program if it is denovo mode or DNARNA mode;\n" +
+                "\t-i, --input  \t\t\tInput all required files in order (i.e., RNA VCF File, DNA VCF File, DARNED Database, Gene Annotation File, " +
+                "RepeatMasker Database File, dbSNP Database File) instead of single input, each file should be divided with ',';\n" +
+                "\t-o, --output=./    \t\tSet export path for the results in database, default path is current directory;\n" +
+                "\t-e, --export=all  \t\tExport the needed columns in database, which must be the column name of a table in database, the column names should" +
+                " be divided by ',';\n" +
                 "\t--rnavcf  \t\t\t\tFile path of RNA VCF file;\n" +
                 "\t--dnavcf  \t\t\t\tFile path of DNA VCF file;\n" +
                 "\t--darned  \t\t\t\tFile path of DARNED database;\n" +
                 "\t--splice  \t\t\t\tFile path of annotation genes like \"gene.gft\";\n" +
                 "\t--repeat  \t\t\t\tFile path of Repeat Masker database;\n" +
                 "\t--dbsnp   \t\t\t\tFile path of dbSNP database;\n" +
-                "\t--rscript \t\t\t\tFile path of RScript.";
+                "\t-r, --rscript \t\t\tFile path of RScript.\n" +
+                "\n" +
+                "Example:\n" +
+                "1) In Windows, use '--' patterns.\n" +
+                "java -jar E:\\Workspace\\REFilters\\out\\artifacts\\REFilters\\REFilters.jar --host=127.0.0.1 --port=3306 --user=root --pwd=123456 " +
+                "--mode=denovo --input=D:\\Downloads\\Documents\\BJ22.snvs.hard.filtered.vcf,D:\\Downloads\\Documents\\hg19.txt," +
+                "D:\\Downloads\\Documents\\genes.gtf,D:\\Downloads\\Documents\\hg19.fa.out,D:\\Downloads\\Documents\\dbsnp_138.hg19.vcf " +
+                "--output=E:\\Workspace\\REFilters\\Results --export=all --rscript=C:\\R\\R-3.1.1\\bin\\Rscript.exe\n" +
+                "\n" +
+                "2) In Windows, use '-' patterns.\n" +
+                "java -jar E:\\Workspace\\REFilters\\out\\artifacts\\REFilters\\REFilters.jar -H 127.0.0.1 -p 3306 -u root -P 123456 -m dnarna -i " +
+                "D:\\Downloads\\Documents\\BJ22.snvs.hard.filtered.vcf,D:\\Downloads\\Documents\\BJ22_sites.hard.filtered.vcf,D:\\Downloads\\Documents\\hg19" +
+                ".txt,D:\\Downloads\\Documents\\genes.gtf,D:\\Downloads\\Documents\\hg19.fa.out,D:\\Downloads\\Documents\\dbsnp_138.hg19.vcf -o " +
+                "E:\\Workspace\\REFilters\\Results -e chrom,pos,level, -r C:\\R\\R-3.1.1\\bin\\Rscript.exe\n" +
+                "\n" +
+                "3) In CentOS, use '-' and '--' patterns.\n" +
+                "java -jar /home/seq/softWare/RED/REFilter.jar -h 127.0.0.1 -p 3306 -u seq -P 123456 -m denovo --rnavcf=/data/rnaEditing/GM12878/GM12878.snvs" +
+                ".hard.filtered.vcf --repeat=/home/seq/softWare/RED/hg19.fa.out --splice=/home/seq/softWare/RED/genes.gtf " +
+                "--dbsnp=/home/seq/softWare/RED/dbsnp_138.hg19.vcf --darned=/home/seq/softWare/RED/hg19.txt --rscript=/usr/bin/Rscript";
     }
 
     public static void exportData(File resultPath, String[] columns, String databaseName) throws IOException {
@@ -517,7 +540,7 @@ public class REDRunner {
                     PrintWriter pw = new PrintWriter(new FileWriter(f));
                     //                    pw.println("pos");
                     ResultSet rs;
-                    if (columns.length == 1 && columns[0].toLowerCase().equals("all")) {
+                    if (columns.length == 1 && columns[0].equalsIgnoreCase("all")) {
                         rs = databaseManager.query(denovoTable, null, null, null);
                     } else {
                         rs = databaseManager.query(denovoTable, columns, null, null);
