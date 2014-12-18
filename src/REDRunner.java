@@ -514,7 +514,7 @@ public class REDRunner {
                 "E:\\Workspace\\REFilters\\Results -e chrom,pos,level, -r C:\\R\\R-3.1.1\\bin\\Rscript.exe\n" +
                 "\n" +
                 "3) In CentOS, use '-' and '--' patterns.\n" +
-                "java -jar /home/seq/softWare/RED/REFilter.jar -h 127.0.0.1 -p 3306 -u seq -P 123456 -m denovo --rnavcf=/data/rnaEditing/GM12878/GM12878.snvs" +
+                "java -jar /home/seq/softWare/RED/REFilter.jar -H 127.0.0.1 -p 3306 -u seq -P 123456 -m denovo --rnavcf=/data/rnaEditing/GM12878/GM12878.snvs" +
                 ".hard.filtered.vcf --repeat=/home/seq/softWare/RED/hg19.fa.out --splice=/home/seq/softWare/RED/genes.gtf " +
                 "--dbsnp=/home/seq/softWare/RED/dbsnp_138.hg19.vcf --darned=/home/seq/softWare/RED/hg19.txt --rscript=/usr/bin/Rscript";
     }
