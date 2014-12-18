@@ -36,7 +36,7 @@ import java.util.Arrays;
  * <p/>
  * VCFParser mainly parsers VCF file and insert all data into database. The class will delete old vcf table and create a new one.
  */
-public class RNAVCFMultiParser {
+public class RNAVCFParser {
     public static final String VCF_CHROM = "CHROM";
     public static final String VCF_POS = "POS";
     //    public static final String VCF_ID = "ID";
@@ -68,7 +68,7 @@ public class RNAVCFMultiParser {
 
     private DatabaseManager databaseManager;
 
-    public RNAVCFMultiParser() {
+    public RNAVCFParser() {
         databaseManager = DatabaseManager.getInstance();
     }
 
@@ -191,7 +191,7 @@ public class RNAVCFMultiParser {
         } catch (IOException e) {
             e.printStackTrace();
         } catch (SQLException e) {
-            System.err.println("Error execute sql clause in " + RNAVCFMultiParser.class.getName() + ":run()");
+            System.err.println("Error execute sql clause in " + RNAVCFParser.class.getName() + ":run()");
             e.printStackTrace();
         } finally {
             if (bufferedReader != null) {
