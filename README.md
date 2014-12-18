@@ -2,6 +2,22 @@
 ##What is REFilter?
 REFilter is a command line tool for detecting RNA editing sites with rule-based filters and statistical filters.
 
+## Table of contents
+
+ - [Prerequisites](#prerequisites)
+ - [How to use REFilter?](#how-to-use-refilter)
+ - [Example](#example)
+ - [Bugs and feature requests](#bugs-and-feature-requests)
+ - [Creators](#creators)
+ - [Copyright and license](#copyright-and-license)
+
+##Prerequisites
+Before running REFilter, the following software or programs are **demanded**:
+
+- Java Runtime Environment (jdk 1.6.0_43 or later)
+- MySQL Database Management System (MySQL 5.6.19 or later)
+- R Environment (R 3.1.1 or later)
+
 ##How to use REFilter？
 ```java 
 Usage: java -jar jarfile [-h|--help] [-v|--version] [-H|--host[=127.0.0.1]] [-p|--port[=3306]]
@@ -85,8 +101,7 @@ java -jar /home/seq/softWare/RED/REFilter.jar
 --darned=/home/seq/softWare/RED/hg19.txt 
 --rscript=/usr/bin/Rscript    
 ```
-    
-    
+
 ## Bugs and feature requests
 
 Have a bug or a feature request? Please first read the [issue guidelines](https://github.com/iluhcm/REFilter/issues) and search for existing and closed issues
