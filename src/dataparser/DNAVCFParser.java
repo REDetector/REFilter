@@ -35,7 +35,7 @@ import java.util.Arrays;
  * <p/>
  * VCFParser mainly parsers VCF file and insert all data into database. The class will delete old vcf table and create a new one.
  */
-public class DNAVCFMultiParser {
+public class DNAVCFParser {
     public static final String VCF_CHROM = "CHROM";
     public static final String VCF_POS = "POS";
     //    public static final String VCF_ID = "ID";
@@ -55,20 +55,17 @@ public class DNAVCFMultiParser {
     private int filterColumn = 6;
     private int infoColumn = 7;
     private int formatColumnIndex = 8;
+    private String[] sampleNames = null;
+    private int columnLength = 0;
+    private String[] tableName = null;
+    private DatabaseManager databaseManager;
+
+    public DNAVCFParser() {
+        databaseManager = DatabaseManager.getInstance();
+    }
 
     public String[] getSampleNames() {
         return sampleNames;
-    }
-
-    private String[] sampleNames = null;
-
-    private int columnLength = 0;
-    private String[] tableName = null;
-
-    private DatabaseManager databaseManager;
-
-    public DNAVCFMultiParser() {
-        databaseManager = DatabaseManager.getInstance();
     }
 
     public void parseMultiVCFFile(String vcfPath) {
