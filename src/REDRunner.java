@@ -196,7 +196,7 @@ public class REDRunner {
             }
         }
 
-        if (INPUT != null) {
+        if (INPUT != null && INPUT.length() != 0) {
             String[] sections = INPUT.split(",");
             if (MODE.equalsIgnoreCase("dnarna") && sections.length == 6) {
                 RNAVCF = sections[0];
@@ -228,11 +228,13 @@ public class REDRunner {
             return;
         }
 
-        File rootPath = new File(OUTPUT);
+        File root = new File(OUTPUT);
+        String rootPath = root.getAbsolutePath();
+        File rootFile = new File(rootPath);
         try {
-            if (!rootPath.exists()) {
-                if (!rootPath.mkdirs()) {
-                    throw new IOException("File path '" + rootPath.getAbsolutePath() + "' can't not be created. Make sure you have the file permission.");
+            if (!rootFile.exists()) {
+                if (!rootFile.mkdirs()) {
+                    throw new IOException("Root path '" + rootFile.getAbsolutePath() + "' can not be created. Make sure you have the file permission.");
                 }
             }
         } catch (IOException e) {
@@ -260,7 +262,7 @@ public class REDRunner {
         try {
             if (!logDir.exists()) {
                 if (!logDir.mkdir()) {
-                    throw new IOException("File path '" + logDir.getAbsolutePath() + "' can't not be created. Make sure you have the file permission.");
+                    throw new IOException("Log path '" + logDir.getAbsolutePath() + "' can not be created. Make sure you have the file permission.");
                 }
             }
         } catch (IOException e) {
@@ -435,7 +437,7 @@ public class REDRunner {
             String logFile = logPath + "/" + logName + "_" + (denovo ? "denovo" : "dnarna") + "_" + Timer.getExportTime() + ".log";
             try {
                 if (!tempFile.renameTo(new File(logFile))) {
-                    throw new IOException("Temp file '" + tempFile.getAbsolutePath() + "' can't not be renamed. Make sure you have the file permission.");
+                    throw new IOException("Temp file '" + tempFile.getAbsolutePath() + "' can not be renamed. Make sure you have the file permission.");
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -450,11 +452,10 @@ public class REDRunner {
             try {
                 File resultPath = new File(rootPath + File.separator + "RED_results");
                 if (!resultPath.exists()) {
-
                     if (!resultPath.mkdir()) {
-                        throw new IOException("File path '" + resultPath.getAbsolutePath() + "' can't not be created. Make sure you have the file permission.");
+                        throw new IOException("Result path '" + resultPath.getAbsolutePath() + "' can not be created. Make sure you have the file " +
+                                "permission.");
                     }
-
                 }
                 exportData(resultPath, EXPORT.split(","), denovo ? DatabaseManager.DENOVO_MODE_DATABASE_NAME : DatabaseManager.DNA_RNA_MODE_DATABASE_NAME);
             } catch (IOException e) {
