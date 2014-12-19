@@ -196,7 +196,7 @@ public class REDRunner {
             }
         }
 
-        if (INPUT != null && INPUT.length() != 0) {
+        if (INPUT.length() != 0) {
             String[] sections = INPUT.split(",");
             if (MODE.equalsIgnoreCase("dnarna") && sections.length == 6) {
                 RNAVCF = sections[0];
@@ -257,6 +257,29 @@ public class REDRunner {
             throw new IllegalArgumentException("Unknown the mode '" + MODE + "', please have a check.");
         }
 
+        File resultPath = new File(rootPath + File.separator + "RED_results");
+        try {
+            if (!resultPath.exists()) {
+                if (!resultPath.mkdir()) {
+                    throw new IOException("Result path '" + resultPath.getAbsolutePath() + "' can not be created. Make sure you have the file " +
+                            "permission.");
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return;
+        }
+
+        if (EXPORT.length() != 0 && (RNAVCF.length() == 0 || (!denovo && DNAVCF.length() == 0))) {
+            try {
+                exportData(resultPath, EXPORT.split(","), denovo ? DatabaseManager.DENOVO_MODE_DATABASE_NAME : DatabaseManager.DNA_RNA_MODE_DATABASE_NAME);
+                return;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return;
+            }
+        }
+
         String logPath = rootPath + File.separator + "RED_logs";
         File logDir = new File(logPath);
         try {
@@ -279,7 +302,7 @@ public class REDRunner {
             String startTime = Timer.getCurrentTime();
             p.println("Start importing data at :\t" + startTime);
             String[] rnaVCFSampleNames;
-            if (RNAVCF != null && RNAVCF.length() != 0) {
+            if (RNAVCF.length() != 0) {
                 RNAVCFParser rnavcfParser = new RNAVCFParser();
                 rnavcfParser.parseMultiVCFFile(RNAVCF);
                 rnaVCFSampleNames = rnavcfParser.getSampleNames();
@@ -288,7 +311,7 @@ public class REDRunner {
             }
             String[] dnaVCFSampleNames;
             if (!denovo) {
-                if (DNAVCF != null && DNAVCF.length() != 0) {
+                if (DNAVCF.length() != 0) {
                     DNAVCFParser dnavcfParser = new DNAVCFParser();
                     dnavcfParser.parseMultiVCFFile(DNAVCF);
                     dnaVCFSampleNames = dnavcfParser.getSampleNames();
@@ -310,24 +333,24 @@ public class REDRunner {
                 }
             }
 
-            if (REPEAT != null && REPEAT.length() != 0) {
+            if (REPEAT.length() != 0) {
                 RepeatRegionsFilter rf = new RepeatRegionsFilter(manager);
                 TableCreator.createRepeatRegionsTable(DatabaseManager.REPEAT_MASKER_TABLE_NAME);
                 rf.loadRepeatTable(DatabaseManager.REPEAT_MASKER_TABLE_NAME, REPEAT);
             }
 
-            if (SPLICE != null && SPLICE.length() != 0) {
+            if (SPLICE.length() != 0) {
                 SpliceJunctionFilter cf = new SpliceJunctionFilter(manager);
                 TableCreator.createSpliceJunctionTable(DatabaseManager.SPLICE_JUNCTION_TABLE_NAME);
                 cf.loadSpliceJunctionTable(DatabaseManager.SPLICE_JUNCTION_TABLE_NAME, SPLICE);
             }
-            if (DBSNP != null && DBSNP.length() != 0) {
+            if (DBSNP.length() != 0) {
                 KnownSNPFilter sf = new KnownSNPFilter(manager);
                 TableCreator.createDBSNPTable(DatabaseManager.DBSNP_DATABASE_TABLE_NAME);
                 sf.loadDbSNPTable(DatabaseManager.DBSNP_DATABASE_TABLE_NAME, DBSNP);
             }
 
-            if (DARNED != null && DARNED.length() != 0) {
+            if (DARNED.length() != 0) {
                 FisherExactTestFilter pv = new FisherExactTestFilter(manager);
                 TableCreator.createDARNEDTable(DatabaseManager.DARNED_DATABASE_TABLE_NAME);
                 pv.loadDarnedTable(DatabaseManager.DARNED_DATABASE_TABLE_NAME, DARNED);
@@ -448,15 +471,8 @@ public class REDRunner {
             e.printStackTrace();
             return;
         }
-        if (EXPORT != null && EXPORT.length() != 0) {
+        if (EXPORT.length() != 0) {
             try {
-                File resultPath = new File(rootPath + File.separator + "RED_results");
-                if (!resultPath.exists()) {
-                    if (!resultPath.mkdir()) {
-                        throw new IOException("Result path '" + resultPath.getAbsolutePath() + "' can not be created. Make sure you have the file " +
-                                "permission.");
-                    }
-                }
                 exportData(resultPath, EXPORT.split(","), denovo ? DatabaseManager.DENOVO_MODE_DATABASE_NAME : DatabaseManager.DNA_RNA_MODE_DATABASE_NAME);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -487,11 +503,9 @@ public class REDRunner {
                 "\t-u, --user=root    \t\tMySQL user name;\n" +
                 "\t-P, --pwd=root     \t\tMySQL password of user;\n" +
                 "\t-m, --mode=dnarna  \t\tTell the program if it is denovo mode or DNARNA mode;\n" +
-                "\t-i, --input  \t\t\tInput all required files in order (i.e., RNA VCF File, DNA VCF File, DARNED Database, Gene Annotation File, " +
-                "RepeatMasker Database File, dbSNP Database File) instead of single input, each file should be divided with ',';\n" +
+                "\t-i, --input  \t\t\tInput all required files in order (i.e., RNA VCF File, DNA VCF File, DARNED Database, Gene Annotation File, RepeatMasker Database File, dbSNP Database File) instead of single input, each file should be divided with ',' and there should not be blank with each file;\n" +
                 "\t-o, --output=./    \t\tSet export path for the results in database, default path is current directory;\n" +
-                "\t-e, --export=all  \t\tExport the needed columns in database, which must be the column name of a table in database, the column names should" +
-                " be divided by ',';\n" +
+                "\t-e, --export=all  \t\tExport the needed columns in database, which must be the column name of a table in database, the column names should be divided by ',';\n" +
                 "\t--rnavcf  \t\t\t\tFile path of RNA VCF file;\n" +
                 "\t--dnavcf  \t\t\t\tFile path of DNA VCF file;\n" +
                 "\t--darned  \t\t\t\tFile path of DARNED database;\n" +
@@ -502,21 +516,41 @@ public class REDRunner {
                 "\n" +
                 "Example:\n" +
                 "1) In Windows, use '--' patterns.\n" +
-                "java -jar E:\\Workspace\\REFilters\\out\\artifacts\\REFilters\\REFilters.jar --host=127.0.0.1 --port=3306 --user=root --pwd=123456 " +
-                "--mode=denovo --input=D:\\Downloads\\Documents\\BJ22.snvs.hard.filtered.vcf,D:\\Downloads\\Documents\\hg19.txt," +
-                "D:\\Downloads\\Documents\\genes.gtf,D:\\Downloads\\Documents\\hg19.fa.out,D:\\Downloads\\Documents\\dbsnp_138.hg19.vcf " +
-                "--output=E:\\Workspace\\REFilters\\Results --export=all --rscript=C:\\R\\R-3.1.1\\bin\\Rscript.exe\n" +
+                "java -jar E:\\Workspace\\REFilters\\out\\artifacts\\REFilters\\REFilters_jdk1.6.0_43.jar ^\n" +
+                "--host=127.0.0.1 ^\n" +
+                "--port=3306 ^\n" +
+                "--user=root ^\n" +
+                "--pwd=123456 ^\n" +
+                "--mode=denovo --input=D:\\Downloads\\Documents\\BJ22.snvs.hard.filtered.vcf,D:\\Downloads\\Documents\\hg19.txt,D:\\Downloads\\Documents\\genes.gtf,D:\\Downloads\\Documents\\hg19.fa.out,D:\\Downloads\\Documents\\dbsnp_138.hg19.vcf ^\n" +
+                "--output=E:\\Workspace\\REFilters\\Results ^\n" +
+                "--export=all ^\n" +
+                "--rscript=C:\\R\\R-3.1.1\\bin\\Rscript.exe\n" +
                 "\n" +
                 "2) In Windows, use '-' patterns.\n" +
-                "java -jar E:\\Workspace\\REFilters\\out\\artifacts\\REFilters\\REFilters.jar -H 127.0.0.1 -p 3306 -u root -P 123456 -m dnarna -i " +
-                "D:\\Downloads\\Documents\\BJ22.snvs.hard.filtered.vcf,D:\\Downloads\\Documents\\BJ22_sites.hard.filtered.vcf,D:\\Downloads\\Documents\\hg19" +
-                ".txt,D:\\Downloads\\Documents\\genes.gtf,D:\\Downloads\\Documents\\hg19.fa.out,D:\\Downloads\\Documents\\dbsnp_138.hg19.vcf -o " +
-                "E:\\Workspace\\REFilters\\Results -e chrom,pos,level, -r C:\\R\\R-3.1.1\\bin\\Rscript.exe\n" +
+                "java -jar E:\\Workspace\\REFilters\\out\\artifacts\\REFilters\\REFilters_jdk1.6.0_43.jar ^\n" +
+                "-H 127.0.0.1 ^\n" +
+                "-p 3306 ^\n" +
+                "-u root ^\n" +
+                "-P 123456 ^\n" +
+                "-m dnarna ^\n" +
+                "-i D:\\Downloads\\Documents\\BJ22.snvs.hard.filtered.vcf,D:\\Downloads\\Documents\\BJ22_sites.hard.filtered.vcf,D:\\Downloads\\Documents\\hg19.txt,D:\\Downloads\\Documents\\genes.gtf,D:\\Downloads\\Documents\\hg19.fa.out,D:\\Downloads\\Documents\\dbsnp_138.hg19.vcf ^\n" +
+                "-o E:\\Workspace\\REFilters\\Results ^\n" +
+                "-e chrom,pos,level ^\n" +
+                "-r C:\\R\\R-3.1.1\\bin\\Rscript.exe\n" +
                 "\n" +
                 "3) In CentOS, use '-' and '--' patterns.\n" +
-                "java -jar /home/seq/softWare/RED/REFilter.jar -H 127.0.0.1 -p 3306 -u seq -P 123456 -m denovo --rnavcf=/data/rnaEditing/GM12878/GM12878.snvs" +
-                ".hard.filtered.vcf --repeat=/home/seq/softWare/RED/hg19.fa.out --splice=/home/seq/softWare/RED/genes.gtf " +
-                "--dbsnp=/home/seq/softWare/RED/dbsnp_138.hg19.vcf --darned=/home/seq/softWare/RED/hg19.txt --rscript=/usr/bin/Rscript";
+                "java -jar /home/seq/softWare/RED/REFilter.jar \n" +
+                "-h 127.0.0.1 \\\n" +
+                "-p 3306 \\\n" +
+                "-u seq \\\n" +
+                "-P 123456 \\\n" +
+                "-m denovo \\\n" +
+                "--rnavcf=/data/rnaEditing/GM12878/GM12878.snvs.hard.filtered.vcf \\\n" +
+                "--repeat=/home/seq/softWare/RED/hg19.fa.out \\\n" +
+                "--splice=/home/seq/softWare/RED/genes.gtf \\\n" +
+                "--dbsnp=/home/seq/softWare/RED/dbsnp_138.hg19.vcf \\\n" +
+                "--darned=/home/seq/softWare/RED/hg19.txt \\\n" +
+                "--rscript=/usr/bin/Rscript";
     }
 
     public static void exportData(File resultPath, String[] columns, String databaseName) throws IOException {
@@ -536,6 +570,7 @@ public class REDRunner {
                     } else {
                         builder.append("_dnarna");
                     }
+                    System.out.println("Export data for : " + builder.toString());
                     builder.append(".txt");
                     File f = new File(resultPath + File.separator + builder.toString());
                     PrintWriter pw = new PrintWriter(new FileWriter(f));
