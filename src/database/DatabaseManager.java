@@ -50,8 +50,8 @@ public class DatabaseManager {
     public static final String REPEAT_MASKER_TABLE_NAME = "repeat_masker";
     public static final String DBSNP_DATABASE_TABLE_NAME = "dbsnp_database";
     private static final DatabaseManager DATABASE_MANAGER = new DatabaseManager();
-    private Connection con = null;
     private static Statement stmt;
+    private Connection con = null;
 
     private DatabaseManager() {
     }
@@ -103,6 +103,17 @@ public class DatabaseManager {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    public List<String> getColumnNames(String database, String tableName) throws SQLException {
+        List<String> columnNames = new ArrayList<String>();
+        useDatabase(database);
+        Statement stmt = con.createStatement();
+        ResultSet rs = stmt.executeQuery("select COLUMN_NAME from information_schema.columns where table_name='" + tableName + "'");
+        while (rs.next()) {
+            columnNames.add(rs.getString(1));
+        }
+        return columnNames;
     }
 
     public List<String> getCurrentTables(String database) throws SQLException {
