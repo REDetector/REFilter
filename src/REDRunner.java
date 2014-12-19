@@ -554,46 +554,82 @@ public class REDRunner {
     }
 
     public static void exportData(File resultPath, String[] columns, String databaseName) throws IOException {
+        DatabaseManager databaseManager = DatabaseManager.getInstance();
+        List<String> currentTables;
         try {
-            DatabaseManager databaseManager = DatabaseManager.getInstance();
             databaseManager.useDatabase(databaseName);
-            List<String> denovoTables = DatabaseManager.getInstance().getCurrentTables(databaseName);
-            for (String denovoTable : denovoTables) {
-                if (denovoTable.contains(DatabaseManager.FET_FILTER_RESULT_TABLE_NAME)) {
-                    String sample = DatabaseManager.getInstance().getSampleName(denovoTable);
-                    StringBuilder builder = new StringBuilder(sample);
-                    for (String column : columns) {
-                        builder.append("_").append(column);
-                    }
-                    if (DatabaseManager.DENOVO_MODE_DATABASE_NAME.equals(databaseName)) {
-                        builder.append("_denovo");
-                    } else {
-                        builder.append("_dnarna");
-                    }
-                    System.out.println("Export data for : " + builder.toString());
-                    builder.append(".txt");
-                    File f = new File(resultPath + File.separator + builder.toString());
-                    PrintWriter pw = new PrintWriter(new FileWriter(f));
-                    //                    pw.println("pos");
-                    ResultSet rs;
-                    if (columns.length == 1 && columns[0].equalsIgnoreCase("all")) {
-                        rs = databaseManager.query(denovoTable, null, null, null);
-                    } else {
-                        rs = databaseManager.query(denovoTable, columns, null, null);
-                    }
-                    while (rs.next()) {
-                        builder = new StringBuilder();
-                        for (String column : columns) {
-                            builder.append(rs.getString(column)).append("\t");
-                        }
-                        pw.println(builder.toString().trim());
-                    }
-                    pw.flush();
-                    pw.close();
-                }
-            }
+            currentTables = DatabaseManager.getInstance().getCurrentTables(databaseName);
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new NullPointerException("Could not get the tables from database '" + databaseName + "'");
         }
+        for (String currentTable : currentTables) {
+            if (currentTable.contains(DatabaseManager.FET_FILTER_RESULT_TABLE_NAME)) {
+                String sample = DatabaseManager.getInstance().getSampleName(currentTable);
+                StringBuilder builder = new StringBuilder(sample);
+                for (String column : columns) {
+                    builder.append("_").append(column);
+                }
+                if (DatabaseManager.DENOVO_MODE_DATABASE_NAME.equals(databaseName)) {
+                    builder.append("_denovo");
+                } else {
+                    builder.append("_dnarna");
+                }
+                System.out.println("Export data for : " + builder.toString());
+                builder.append(".txt");
+                File f = new File(resultPath + File.separator + builder.toString());
+                PrintWriter pw = new PrintWriter(new FileWriter(f));
+                //                    pw.println("pos");
+                ResultSet rs;
+                if (columns.length == 1 && columns[0].equalsIgnoreCase("all")) {
+                    rs = databaseManager.query(currentTable, null, null, null);
+                    List<String> columnNames;
+                    try {
+                        columnNames = databaseManager.getColumnNames(databaseName, currentTable);
+                    } catch (SQLException e) {
+                        throw new NullPointerException("Could not get the column names from table '" + currentTable + "'");
+                    }
+
+                    builder = new StringBuilder();
+                    for (String column : columnNames) {
+                        builder.append(column).append("\t");
+                    }
+                    pw.println(builder.toString().trim());
+
+                    try {
+                        while (rs.next()) {
+                            builder = new StringBuilder();
+                            for (String column : columnNames) {
+                                builder.append(rs.getString(column)).append("\t");
+                            }
+                            pw.println(builder.toString().trim());
+                        }
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    rs = databaseManager.query(currentTable, columns, null, null);
+                    builder = new StringBuilder();
+                    for (String column : columns) {
+                        builder.append(column).append("\t");
+                    }
+                    pw.println(builder.toString().trim());
+
+                    try {
+                        while (rs.next()) {
+                            builder = new StringBuilder();
+                            for (String column : columns) {
+                                builder.append(rs.getString(column)).append("\t");
+                            }
+                            pw.println(builder.toString().trim());
+                        }
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+                pw.flush();
+                pw.close();
+            }
+        }
+
     }
 }
