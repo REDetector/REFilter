@@ -44,6 +44,7 @@ public class REDRunner {
     public static String PORT = "3306";
     public static String USER = "root";
     public static String PWD = "root";
+    public static String DATABASE = DatabaseManager.DNA_RNA_MODE_DATABASE_NAME;
     public static String MODE = "dnarna";
     public static String INPUT = "";
     public static String OUTPUT = "";
@@ -56,46 +57,6 @@ public class REDRunner {
     public static String DBSNP = "";
     public static String RSCRIPT = "/usr/bin/RScript";
 
-    /**
-     * A tool to run RED using command line.
-     *
-     * @param args To run RED in a easy way, we define some parameters as following illustrated.
-     *             <p/>
-     *             -h, --help   Print short help message and exit
-     *             <p/>
-     *             --version Print version info and exit
-     *             <p/>
-     *             -H, --host=127.0.0.1    The host address of MySQL database;
-     *             <p/>
-     *             -p, --port=    The port used in MySQL;
-     *             <p/>
-     *             -u, --user    MySQL user name;
-     *             <p/>
-     *             -P, --pwd     MySQL password of user;
-     *             <p/>
-     *             -m, --mode  Tell the program if it is denovo mode of DNA-RNA mode
-     *             <p/>
-     *             -i, --input  Input all required files in order (i.e., RNA VCF File, DNA VCF File, DARNED Database, Gene Annotation File, RepeatMasker
-     *             Database File, dbSNP Database File) instead of single input, each file should be divided with ','.
-     *             <p/>
-     *             --rnavcf  File path of RNA VCF file;
-     *             <p/>
-     *             --dnavcf  File path of DNA VCF file;
-     *             <p/>
-     *             --darned  File path of DARNED database;
-     *             <p/>
-     *             --splice  File path of annotation genes like "gene.gft";
-     *             <p/>
-     *             --repeat  File path of Repeat Masker database;
-     *             <p/>
-     *             --dbsnp   File path of dbSNP database;
-     *             <p/>
-     *             --rscript File path of RScript;
-     *             <p/>
-     *             --export  Export all final sites for annotation;
-     *             <p/>
-     *             --path    Export path.
-     */
     public static void main(String[] args) {
         for (String arg : args) {
             if (arg.equals("-h") || arg.equals("--help")) {
@@ -138,6 +99,9 @@ public class REDRunner {
                 case 'P':
                     PWD = value;
                     break;
+                case 'd':
+                    DATABASE = value;
+                    break;
                 case 'm':
                     MODE = value;
                     break;
@@ -171,13 +135,15 @@ public class REDRunner {
                 PWD = value;
             } else if (key.equalsIgnoreCase("mode")) {
                 MODE = value;
+            } else if (key.equalsIgnoreCase("database")) {
+                DATABASE = value;
             } else if (key.equalsIgnoreCase("input")) {
                 INPUT = value;
             } else if (key.equalsIgnoreCase("output")) {
                 OUTPUT = value;
             } else if (key.equalsIgnoreCase("export")) {
                 EXPORT = value;
-            } else if (key.equalsIgnoreCase("rscript")) {
+            } else if (key.equalsIgnoreCase("r")) {
                 RSCRIPT = value;
             } else if (key.equalsIgnoreCase("rnavcf")) {
                 RNAVCF = value;
@@ -199,18 +165,18 @@ public class REDRunner {
         if (INPUT.length() != 0) {
             String[] sections = INPUT.split(",");
             if (MODE.equalsIgnoreCase("dnarna") && sections.length == 6) {
-                RNAVCF = sections[0];
-                DNAVCF = sections[1];
-                DARNED = sections[2];
-                SPLICE = sections[3];
-                REPEAT = sections[4];
-                DBSNP = sections[5];
+                RNAVCF = sections[0].trim();
+                DNAVCF = sections[1].trim();
+                DARNED = sections[2].trim();
+                SPLICE = sections[3].trim();
+                REPEAT = sections[4].trim();
+                DBSNP = sections[5].trim();
             } else if (MODE.equalsIgnoreCase("denovo") && sections.length == 5) {
-                RNAVCF = sections[0];
-                DARNED = sections[1];
-                SPLICE = sections[2];
-                REPEAT = sections[3];
-                DBSNP = sections[4];
+                RNAVCF = sections[0].trim();
+                DARNED = sections[1].trim();
+                SPLICE = sections[2].trim();
+                REPEAT = sections[3].trim();
+                DBSNP = sections[4].trim();
             } else {
                 throw new IllegalArgumentException("Unknown the argument '--INPUT " + INPUT + "' or it is incomplete, please have a check.");
             }
@@ -243,19 +209,21 @@ public class REDRunner {
         }
         boolean denovo;
         //Data import for five or six files, which is depended on denovo mode or DNA-RNA mode.
-        if (MODE.equalsIgnoreCase("dnarna")) {
-            DatabasePreferences.getInstance().setCurrentDatabase(DatabaseManager.DNA_RNA_MODE_DATABASE_NAME);
-            manager.createDatabase(DatabaseManager.DNA_RNA_MODE_DATABASE_NAME);
-            manager.useDatabase(DatabaseManager.DNA_RNA_MODE_DATABASE_NAME);
+        if (DATABASE.length() != 0) {
+
+            denovo = MODE.equalsIgnoreCase("denovo");
+        } else if (MODE.equalsIgnoreCase("dnarna")) {
+            DATABASE = DatabaseManager.DNA_RNA_MODE_DATABASE_NAME;
             denovo = false;
         } else if (MODE.equalsIgnoreCase("denovo")) {
-            DatabasePreferences.getInstance().setCurrentDatabase(DatabaseManager.DENOVO_MODE_DATABASE_NAME);
-            manager.createDatabase(DatabaseManager.DENOVO_MODE_DATABASE_NAME);
-            manager.useDatabase(DatabaseManager.DENOVO_MODE_DATABASE_NAME);
+            DATABASE = DatabaseManager.DENOVO_MODE_DATABASE_NAME;
             denovo = true;
         } else {
             throw new IllegalArgumentException("Unknown the mode '" + MODE + "', please have a check.");
         }
+        DatabasePreferences.getInstance().setCurrentDatabase(DATABASE);
+        manager.createDatabase(DATABASE);
+        manager.useDatabase(DATABASE);
 
         File resultPath = new File(rootPath + File.separator + "RED_results");
         try {
@@ -272,7 +240,7 @@ public class REDRunner {
 
         if (EXPORT.length() != 0 && (RNAVCF.length() == 0 || (!denovo && DNAVCF.length() == 0))) {
             try {
-                exportData(resultPath, EXPORT.split(","), denovo ? DatabaseManager.DENOVO_MODE_DATABASE_NAME : DatabaseManager.DNA_RNA_MODE_DATABASE_NAME);
+                exportData(resultPath, EXPORT.split(","), DATABASE);
                 return;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -349,7 +317,6 @@ public class REDRunner {
                 TableCreator.createDBSNPTable(DatabaseManager.DBSNP_DATABASE_TABLE_NAME);
                 sf.loadDbSNPTable(DatabaseManager.DBSNP_DATABASE_TABLE_NAME, DBSNP);
             }
-
             if (DARNED.length() != 0) {
                 FisherExactTestFilter pv = new FisherExactTestFilter(manager);
                 TableCreator.createDARNEDTable(DatabaseManager.DARNED_DATABASE_TABLE_NAME);
@@ -365,10 +332,10 @@ public class REDRunner {
 
                 p.println("------------------------ Sample name : " + sample + " ------------------------");
                 if (!denovo) {
-                    p.println("Mode:\t" + DatabaseManager.DNA_RNA_MODE_DATABASE_NAME);
+                    p.println("Mode:\tDNA-RNA Mode");
                     p.println("DNA VCF File :\t" + DNAVCF);
                 } else {
-                    p.println("Mode:\t" + DatabaseManager.DENOVO_MODE_DATABASE_NAME);
+                    p.println("Mode:\tde novo Mode");
                 }
                 p.println("RNA VCF File :\t" + RNAVCF);
                 p.println("DARNED File :\t" + DARNED);
@@ -381,18 +348,24 @@ public class REDRunner {
                 String dnavcfTableName = sample + "_" + DatabaseManager.DNA_VCF_RESULT_TABLE_NAME;
                 String etfFilterName = sample + "_" + DatabaseManager.RNA_VCF_RESULT_TABLE_NAME + "_" + DatabaseManager.EDITING_TYPE_FILTER_RESULT_TABLE_NAME;
                 String qcFilterName = sample + "_" + DatabaseManager.EDITING_TYPE_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.QC_FILTER_RESULT_TABLE_NAME;
-                String rrFilterName = sample + "_" + DatabaseManager.QC_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.REPEAT_FILTER_RESULT_TABLE_NAME;
-                String aluFilterName = sample + "_" + DatabaseManager.QC_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.ALU_FILTER_RESULT_TABLE_NAME;
-                String sjFilterName = sample + "_" + DatabaseManager.REPEAT_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.SPLICE_JUNCTION_FILTER_RESULT_TABLE_NAME;
-                String ksfFilterName = sample + "_" + DatabaseManager.SPLICE_JUNCTION_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.DBSNP_FILTER_RESULT_TABLE_NAME;
-                String drFilterName = sample + "_" + DatabaseManager.DBSNP_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.DNA_RNA_FILTER_RESULT_TABLE_NAME;
+
+                String drFilterName = sample + "_" + DatabaseManager.QC_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.DNA_RNA_FILTER_RESULT_TABLE_NAME;
                 String llrFilterName = sample + "_" + DatabaseManager.DNA_RNA_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.LLR_FILTER_RESULT_TABLE_NAME;
-                String fetFilterName;
+                String ksfFilterName;
+
                 if (!denovo) {
-                    fetFilterName = sample + "_" + DatabaseManager.LLR_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.FET_FILTER_RESULT_TABLE_NAME;
+                    ksfFilterName = sample + "_" + DatabaseManager.LLR_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.DBSNP_FILTER_RESULT_TABLE_NAME;
                 } else {
-                    fetFilterName = sample + "_" + DatabaseManager.DBSNP_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.FET_FILTER_RESULT_TABLE_NAME;
+                    ksfFilterName = sample + "_" + DatabaseManager.QC_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.DBSNP_FILTER_RESULT_TABLE_NAME;
                 }
+
+                String sjFilterName = sample + "_" + DatabaseManager.DBSNP_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.SPLICE_JUNCTION_FILTER_RESULT_TABLE_NAME;
+                String aluFilterName = sample + "_" + DatabaseManager.SPLICE_JUNCTION_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.ALU_FILTER_RESULT_TABLE_NAME;
+                String rrFilterName = sample + "_" + DatabaseManager.SPLICE_JUNCTION_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.REPEAT_FILTER_RESULT_TABLE_NAME;
+
+
+                String fetFilterName = sample + "_" + DatabaseManager.REPEAT_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.FET_FILTER_RESULT_TABLE_NAME;
+
 
                 startTime = Timer.getCurrentTime();
                 p.println("Start performing filters at :\t" + startTime);
@@ -407,26 +380,10 @@ public class REDRunner {
                 qcf.executeQCFilter(etfFilterName, qcFilterName, 20, 6);
                 DatabaseManager.getInstance().distinctTable(qcFilterName);
 
-                RepeatRegionsFilter rrf = new RepeatRegionsFilter(manager);
-                TableCreator.createFilterTable(rrFilterName);
-                TableCreator.createFilterTable(aluFilterName);
-                rrf.executeRepeatFilter(DatabaseManager.REPEAT_MASKER_TABLE_NAME, rrFilterName, aluFilterName, qcFilterName);
-                DatabaseManager.getInstance().distinctTable(rrFilterName);
-
-                SpliceJunctionFilter sjf = new SpliceJunctionFilter(manager);
-                TableCreator.createFilterTable(sjFilterName);
-                sjf.executeSpliceJunctionFilter(DatabaseManager.SPLICE_JUNCTION_TABLE_NAME, sjFilterName, rrFilterName, 2);
-                DatabaseManager.getInstance().distinctTable(sjFilterName);
-
-                KnownSNPFilter ksf = new KnownSNPFilter(manager);
-                TableCreator.createFilterTable(ksfFilterName);
-                ksf.executeDbSNPFilter(DatabaseManager.DBSNP_DATABASE_TABLE_NAME, ksfFilterName, sjFilterName);
-                DatabaseManager.getInstance().distinctTable(ksfFilterName);
-
                 if (!denovo) {
                     DNARNAFilter drf = new DNARNAFilter(manager);
                     TableCreator.createFilterTable(drFilterName);
-                    drf.executeDnaRnaFilter(drFilterName, dnavcfTableName, ksfFilterName);
+                    drf.executeDnaRnaFilter(drFilterName, dnavcfTableName, etfFilterName);
                     DatabaseManager.getInstance().distinctTable(drFilterName);
 
                     LikelihoodRatioFilter llrf = new LikelihoodRatioFilter(manager);
@@ -434,17 +391,33 @@ public class REDRunner {
                     llrf.executeLLRFilter(llrFilterName, dnavcfTableName, drFilterName, 4);
                     DatabaseManager.getInstance().distinctTable(llrFilterName);
 
-                    FisherExactTestFilter fetf = new FisherExactTestFilter(manager);
-                    TableCreator.createFisherExactTestTable(fetFilterName);
-                    fetf.executeFDRFilter(DatabaseManager.DARNED_DATABASE_TABLE_NAME, fetFilterName, llrFilterName, RSCRIPT, 0.05, 0.05);
-                    DatabaseManager.getInstance().distinctTable(fetFilterName);
+                    KnownSNPFilter ksf = new KnownSNPFilter(manager);
+                    TableCreator.createFilterTable(ksfFilterName);
+                    ksf.executeDbSNPFilter(DatabaseManager.DBSNP_DATABASE_TABLE_NAME, ksfFilterName, llrFilterName);
+                    DatabaseManager.getInstance().distinctTable(ksfFilterName);
                 } else {
-                    FisherExactTestFilter fetf = new FisherExactTestFilter(manager);
-                    TableCreator.createFisherExactTestTable(fetFilterName);
-                    fetf.executeFDRFilter(DatabaseManager.DARNED_DATABASE_TABLE_NAME, fetFilterName, ksfFilterName, RSCRIPT, 0.05, 0.05);
-                    DatabaseManager.getInstance().distinctTable(fetFilterName);
-
+                    KnownSNPFilter ksf = new KnownSNPFilter(manager);
+                    TableCreator.createFilterTable(ksfFilterName);
+                    ksf.executeDbSNPFilter(DatabaseManager.DBSNP_DATABASE_TABLE_NAME, ksfFilterName, qcFilterName);
+                    DatabaseManager.getInstance().distinctTable(ksfFilterName);
                 }
+
+                SpliceJunctionFilter sjf = new SpliceJunctionFilter(manager);
+                TableCreator.createFilterTable(sjFilterName);
+                sjf.executeSpliceJunctionFilter(DatabaseManager.SPLICE_JUNCTION_TABLE_NAME, sjFilterName, ksfFilterName, 2);
+                DatabaseManager.getInstance().distinctTable(sjFilterName);
+
+                RepeatRegionsFilter rrf = new RepeatRegionsFilter(manager);
+                TableCreator.createFilterTable(rrFilterName);
+                TableCreator.createFilterTable(aluFilterName);
+                rrf.executeRepeatFilter(DatabaseManager.REPEAT_MASKER_TABLE_NAME, rrFilterName, aluFilterName, sjFilterName);
+                DatabaseManager.getInstance().distinctTable(rrFilterName);
+
+                FisherExactTestFilter fetf = new FisherExactTestFilter(manager);
+                TableCreator.createFisherExactTestTable(fetFilterName);
+                fetf.executeFDRFilter(DatabaseManager.DARNED_DATABASE_TABLE_NAME, fetFilterName, llrFilterName, RSCRIPT, 0.05, 0.05);
+                DatabaseManager.getInstance().distinctTable(fetFilterName);
+
                 endTime = Timer.getCurrentTime();
                 p.println("End performing filters at :\t" + endTime);
                 p.println("Filter performance lasts for :\t" + Timer.calculateInterval(startTime, endTime));
@@ -473,7 +446,7 @@ public class REDRunner {
         }
         if (EXPORT.length() != 0) {
             try {
-                exportData(resultPath, EXPORT.split(","), denovo ? DatabaseManager.DENOVO_MODE_DATABASE_NAME : DatabaseManager.DNA_RNA_MODE_DATABASE_NAME);
+                exportData(resultPath, EXPORT.split(","), DATABASE);
             } catch (IOException e) {
                 e.printStackTrace();
             }
