@@ -22,7 +22,8 @@ Before running REFilter, the following software or programs are **demanded**:
 ```java 
 Usage: java -jar jarfile [-h|--help] [-v|--version] [-H|--host[=127.0.0.1]] [-p|--port[=3306]]
 [-u|--user[=root]] [-P|--pwd[=root]] [-d|--database[=DNA_RNA_MODE]] [-m|--mode[=dnarna]] [-i|--input]
-[-o|--output[=./]] [-e|--export[=all]] [--rnavcf] [--dnavcf] [--darned] [--splice] [--repeat] [--dbsnp]
+[-o|--output[=./]] [-e|--export[=all]] [-O|--order[=12345678]][--rnavcf] [--dnavcf] [--darned]
+[--splice] [--repeat] [--dbsnp]
 ```
 
 The most commonly used REFilters commands are:
@@ -40,17 +41,34 @@ The most commonly used REFilters commands are:
 	                            DARNED Database, Gene Annotation File, RepeatMasker Database File,
 	                            dbSNP Database File) instead of single input, each file should be
 	                            divided with ',' and there should not be blank with each file;
-    -o, --output=./             Set export path for the results in database, default path is current
+    -o, --output=.              Set export path for the results in database, default path is current
                                 directory;
     -e, --export=all            Export the needed columns in database, which must be the column name
                                 of a table in database, the column names should be divided by ',';
+    -O, --order=12345678        The order of performing the filter.
     --rnavcf                    File path of RNA VCF file;
     --dnavcf                    File path of DNA VCF file;
     --darned                    File path of DARNED database;
     --splice                    File path of annotation genes like "gene.gft";
     --repeat                    File path of Repeat Masker database;
     --dbsnp                     File path of dbSNP database;
-    
+
+##Explanation for order option
+The default order for DNA-RNA mode is (1)editing type filter -> (2)quality control filter -> (3)DNA-RNA filter -> (4)splice junction filter -> (5)repeat
+regions filter -> (6)known SNP filter -> (7)likelihood ratio test filter -> (8)fisher's exact test filter.
+
+The default order for denovo mode is (1)editing type filter -> (2)quality control filter -> (3)splice junction filter -> (4)repeat regions filter -> (5)known
+ SNP filter -> (6)fisher's exact test filter.
+
+You can change the order by this option. For DNA-RNA mode, eight filters are available so that you could not enter less than 8 in the order (e.g., '2143657' is
+illegal, '51432678' is legal). The same for denovo mode, six filters are available (e.g., '5214376' is illegal, '523516' is legal).
+
+It is strongly recommended the FET filter place in the last of the order since it will affect the results by calculating the p-value and false discovery rate.
+
+Besides, if there is any filter that you do not want to perform in the filter list, just replace the index number from the filter name to zero. For example,
+in DNA-RNA mode, I do not want to perform known SNP filter and likelihood test filter, then the order should be '12345008'. You can change the filter order,
+too.
+
 ##Example:
 * 1) In Windows, use '--' patterns.
 
