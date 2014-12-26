@@ -2,8 +2,9 @@
 *.iml
 .idea
 
-#Filter the result directory.
-Results/
+#Filter the output files and log files.
+*.txt
+*.log
 
 #Filter the output directory.
 out/
@@ -11,5 +12,5 @@ out/
 #Filter META-INF directory.
 src/META-INF
 
-#Test file
-src/main.java
+#Filter test directory.
+test/
