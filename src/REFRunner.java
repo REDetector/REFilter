@@ -17,19 +17,25 @@
  */
 
 import database.DatabaseManager;
-import database.TableCreator;
-import dataparser.DNAVCFParser;
-import dataparser.RNAVCFParser;
+import dataparser.*;
+import filter.Filter;
 import filter.denovo.*;
 import filter.dnarna.DNARNAFilter;
 import filter.dnarna.LikelihoodRatioFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import utils.DatabasePreferences;
+import utils.FileUtils;
 import utils.Timer;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -38,8 +44,7 @@ import java.util.Map;
  * <p/>
  * A command line tool to run RNA Editing Filters.
  */
-public class REDRunner {
-
+public class REFRunner {
     public static String HOST = "127.0.0.1";
     public static String PORT = "3306";
     public static String USER = "root";
@@ -56,6 +61,8 @@ public class REDRunner {
     public static String REPEAT = "";
     public static String DBSNP = "";
     public static String RSCRIPT = "/usr/bin/RScript";
+    public static String ORDER = "12345678";
+    private static Logger logger = LoggerFactory.getLogger(REFRunner.class);
 
     public static void main(String[] args) {
         for (String arg : args) {
@@ -79,7 +86,8 @@ public class REDRunner {
                 singleMap.put(c, args[i + 1]);
                 i++;
             } else {
-                throw new IllegalArgumentException("Wrong input parameters, please have a check.");
+                logger.error("Wrong input parameters, please have a check.", new IllegalArgumentException());
+                return;
             }
         }
 
@@ -117,8 +125,12 @@ public class REDRunner {
                 case 'r':
                     RSCRIPT = value;
                     break;
+                case 'O':
+                    ORDER = value;
+                    break;
                 default:
-                    throw new IllegalArgumentException("Unknown the argument '-" + key + "', please have a check.");
+                    logger.error("Unknown the argument '-" + key + "', please have a check.", new IllegalArgumentException());
+                    return;
             }
         }
 
@@ -157,8 +169,11 @@ public class REDRunner {
                 REPEAT = value;
             } else if (key.equalsIgnoreCase("dbsnp")) {
                 DBSNP = value;
+            } else if (key.equalsIgnoreCase("order")) {
+                ORDER = value;
             } else {
-                throw new IllegalArgumentException("Unknown the argument '--" + key + "', please have a check.");
+                logger.error("Unknown the argument '--" + key + "', please have a check.", new IllegalArgumentException());
+                return;
             }
         }
 
@@ -178,39 +193,31 @@ public class REDRunner {
                 REPEAT = sections[3].trim();
                 DBSNP = sections[4].trim();
             } else {
-                throw new IllegalArgumentException("Unknown the argument '--INPUT " + INPUT + "' or it is incomplete, please have a check.");
+                logger.error("Unknown the argument '--INPUT " + INPUT + "' or it is incomplete, please have a check.", new IllegalArgumentException());
+                return;
             }
         }
 
+        logger.info("Start connecting the database...");
         DatabaseManager manager = DatabaseManager.getInstance();
-        try {
-            manager.connectDatabase(HOST, PORT, USER, PWD);
-            manager.setAutoCommit(true);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return;
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+        if (!manager.connectDatabase(HOST, PORT, USER, PWD)) {
+            logger.error("Sorry, fail to connect to the database. You may input one of the wrong database host, port, user name or password.", new SQLException());
             return;
         }
+        logger.info("Connect database successfully.");
+        manager.setAutoCommit(true);
 
+        logger.info("Set up the output directory.");
         File root = new File(OUTPUT);
         String rootPath = root.getAbsolutePath();
-        File rootFile = new File(rootPath);
-        try {
-            if (!rootFile.exists()) {
-                if (!rootFile.mkdirs()) {
-                    throw new IOException("Root path '" + rootFile.getAbsolutePath() + "' can not be created. Make sure you have the file permission.");
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (!FileUtils.createDirectory(rootPath)) {
+            logger.error("Root path '{}' can not be created. Make sure you have the permission.", rootPath);
             return;
         }
+
         boolean denovo;
         //Data import for five or six files, which is depended on denovo mode or DNA-RNA mode.
         if (DATABASE.length() != 0) {
-
             denovo = MODE.equalsIgnoreCase("denovo");
         } else if (MODE.equalsIgnoreCase("dnarna")) {
             DATABASE = DatabaseManager.DNA_RNA_MODE_DATABASE_NAME;
@@ -219,237 +226,173 @@ public class REDRunner {
             DATABASE = DatabaseManager.DENOVO_MODE_DATABASE_NAME;
             denovo = true;
         } else {
-            throw new IllegalArgumentException("Unknown the mode '" + MODE + "', please have a check.");
+            logger.error("Unknown the mode '{}', please have a check.", MODE);
+            return;
         }
+
         DatabasePreferences.getInstance().setCurrentDatabase(DATABASE);
         manager.createDatabase(DATABASE);
         manager.useDatabase(DATABASE);
 
-        File resultPath = new File(rootPath + File.separator + "RED_results");
-        try {
-            if (!resultPath.exists()) {
-                if (!resultPath.mkdir()) {
-                    throw new IOException("Result path '" + resultPath.getAbsolutePath() + "' can not be created. Make sure you have the file " +
-                            "permission.");
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+        File resultPath = new File(rootPath + File.separator + "results");
+        if (!FileUtils.createDirectory(resultPath)) {
+            logger.error("Result path '{}' can not be created. Make sure you have the file permission.", resultPath.getAbsolutePath());
             return;
         }
 
         if (EXPORT.length() != 0 && (RNAVCF.length() == 0 || (!denovo && DNAVCF.length() == 0))) {
-            try {
-                exportData(resultPath, EXPORT.split(","), DATABASE);
-                return;
-            } catch (IOException e) {
-                e.printStackTrace();
-                return;
-            }
-        }
-
-        String logPath = rootPath + File.separator + "RED_logs";
-        File logDir = new File(logPath);
-        try {
-            if (!logDir.exists()) {
-                if (!logDir.mkdir()) {
-                    throw new IOException("Log path '" + logDir.getAbsolutePath() + "' can not be created. Make sure you have the file permission.");
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+            exportData(resultPath, EXPORT.split(","), DATABASE);
             return;
         }
 
-        try {
-            String tempPath = logDir.getAbsolutePath() + File.separator + "temp_" + Timer.getExportTime() + ".log";
-            File tempFile = new File(tempPath);
-            PrintStream p = new PrintStream(new FileOutputStream(tempFile));
-
-            // Next, print the start time of the data import.
-            String startTime = Timer.getCurrentTime();
-            p.println("Start importing data at :\t" + startTime);
-            String[] rnaVCFSampleNames;
-            if (RNAVCF.length() != 0) {
-                RNAVCFParser rnavcfParser = new RNAVCFParser();
-                rnavcfParser.parseMultiVCFFile(RNAVCF);
-                rnaVCFSampleNames = rnavcfParser.getSampleNames();
+        // Next, print the start time of the data import.
+        String startTime = Timer.getCurrentTime();
+        logger.info("Start importing data:\t" + startTime);
+        String[] rnaVCFSampleNames;
+        if (RNAVCF.length() != 0) {
+            RNAVCFParser rnavcfParser = new RNAVCFParser();
+            rnavcfParser.parseMultiVCFFile(RNAVCF);
+            rnaVCFSampleNames = rnavcfParser.getSampleNames();
+        } else {
+            logger.error("RNA VCF file is empty, please have a check.");
+            throw new NullPointerException();
+        }
+        String[] dnaVCFSampleNames;
+        if (!denovo) {
+            if (DNAVCF.length() != 0) {
+                DNAVCFParser dnavcfParser = new DNAVCFParser();
+                dnavcfParser.parseMultiVCFFile(DNAVCF);
+                dnaVCFSampleNames = dnavcfParser.getSampleNames();
             } else {
-                throw new NullPointerException("RNA VCF file is empty, please have a check.");
+                logger.error("DNA VCF file is empty, please have a check.");
+                throw new NullPointerException();
             }
-            String[] dnaVCFSampleNames;
-            if (!denovo) {
-                if (DNAVCF.length() != 0) {
-                    DNAVCFParser dnavcfParser = new DNAVCFParser();
-                    dnavcfParser.parseMultiVCFFile(DNAVCF);
-                    dnaVCFSampleNames = dnavcfParser.getSampleNames();
-                } else {
-                    throw new NullPointerException("DNA VCF file is empty, please have a check.");
-                }
 
-                boolean match = false;
-                for (String rnaSample : rnaVCFSampleNames) {
-                    match = false;
-                    for (String dnaSample : dnaVCFSampleNames) {
-                        if (rnaSample.equalsIgnoreCase(dnaSample)) {
-                            match = true;
-                        }
+            boolean match = false;
+            for (String rnaSample : rnaVCFSampleNames) {
+                match = false;
+                for (String dnaSample : dnaVCFSampleNames) {
+                    if (rnaSample.equalsIgnoreCase(dnaSample)) {
+                        match = true;
                     }
                 }
-                if (!match) {
-                    throw new IllegalArgumentException("Samples in DNA VCF file does not match the RNA VCF, please have a check the sample name.");
-                }
             }
-
-            if (REPEAT.length() != 0) {
-                RepeatRegionsFilter rf = new RepeatRegionsFilter(manager);
-                TableCreator.createRepeatRegionsTable(DatabaseManager.REPEAT_MASKER_TABLE_NAME);
-                rf.loadRepeatTable(DatabaseManager.REPEAT_MASKER_TABLE_NAME, REPEAT);
+            if (!match) {
+                logger.error("Samples in DNA VCF file does not match the RNA VCF, please have a check the sample name.");
+                throw new IllegalArgumentException();
             }
-
-            if (SPLICE.length() != 0) {
-                SpliceJunctionFilter cf = new SpliceJunctionFilter(manager);
-                TableCreator.createSpliceJunctionTable(DatabaseManager.SPLICE_JUNCTION_TABLE_NAME);
-                cf.loadSpliceJunctionTable(DatabaseManager.SPLICE_JUNCTION_TABLE_NAME, SPLICE);
-            }
-            if (DBSNP.length() != 0) {
-                KnownSNPFilter sf = new KnownSNPFilter(manager);
-                TableCreator.createDBSNPTable(DatabaseManager.DBSNP_DATABASE_TABLE_NAME);
-                sf.loadDbSNPTable(DatabaseManager.DBSNP_DATABASE_TABLE_NAME, DBSNP);
-            }
-            if (DARNED.length() != 0) {
-                FisherExactTestFilter pv = new FisherExactTestFilter(manager);
-                TableCreator.createDARNEDTable(DatabaseManager.DARNED_DATABASE_TABLE_NAME);
-                pv.loadDarnedTable(DatabaseManager.DARNED_DATABASE_TABLE_NAME, DARNED);
-            }
-
-            String endTime = Timer.getCurrentTime();
-            p.println("End importing data at :\t" + endTime);
-            p.println("Data import lasts for :\t" + Timer.calculateInterval(startTime, endTime));
-            p.println();
-            for (String sample : rnaVCFSampleNames) {
-                // First, print base information of all data.
-
-                p.println("------------------------ Sample name : " + sample + " ------------------------");
-                if (!denovo) {
-                    p.println("Mode:\tDNA-RNA Mode");
-                    p.println("DNA VCF File :\t" + DNAVCF);
-                } else {
-                    p.println("Mode:\tde novo Mode");
-                }
-                p.println("RNA VCF File :\t" + RNAVCF);
-                p.println("DARNED File :\t" + DARNED);
-                p.println("Splice Junction File :\t" + SPLICE);
-                p.println("Repeat Masker File :\t" + REPEAT);
-                p.println("dbSNP File :\t" + DBSNP);
-                p.println("RScript Path :\t" + RSCRIPT);
-
-                String rawFilterName = sample + "_" + DatabaseManager.RNA_VCF_RESULT_TABLE_NAME;
-                String dnavcfTableName = sample + "_" + DatabaseManager.DNA_VCF_RESULT_TABLE_NAME;
-                String etfFilterName = sample + "_" + DatabaseManager.RNA_VCF_RESULT_TABLE_NAME + "_" + DatabaseManager.EDITING_TYPE_FILTER_RESULT_TABLE_NAME;
-                String qcFilterName = sample + "_" + DatabaseManager.EDITING_TYPE_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.QC_FILTER_RESULT_TABLE_NAME;
-
-                String drFilterName = sample + "_" + DatabaseManager.QC_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.DNA_RNA_FILTER_RESULT_TABLE_NAME;
-                String llrFilterName = sample + "_" + DatabaseManager.DNA_RNA_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.LLR_FILTER_RESULT_TABLE_NAME;
-                String ksfFilterName;
-
-                if (!denovo) {
-                    ksfFilterName = sample + "_" + DatabaseManager.LLR_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.DBSNP_FILTER_RESULT_TABLE_NAME;
-                } else {
-                    ksfFilterName = sample + "_" + DatabaseManager.QC_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.DBSNP_FILTER_RESULT_TABLE_NAME;
-                }
-
-                String sjFilterName = sample + "_" + DatabaseManager.DBSNP_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.SPLICE_JUNCTION_FILTER_RESULT_TABLE_NAME;
-                String aluFilterName = sample + "_" + DatabaseManager.SPLICE_JUNCTION_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.ALU_FILTER_RESULT_TABLE_NAME;
-                String rrFilterName = sample + "_" + DatabaseManager.SPLICE_JUNCTION_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.REPEAT_FILTER_RESULT_TABLE_NAME;
-
-
-                String fetFilterName = sample + "_" + DatabaseManager.REPEAT_FILTER_RESULT_TABLE_NAME + "_" + DatabaseManager.FET_FILTER_RESULT_TABLE_NAME;
-
-
-                startTime = Timer.getCurrentTime();
-                p.println("Start performing filters at :\t" + startTime);
-                // Filter execution
-                EditingTypeFilter etf = new EditingTypeFilter(manager);
-                TableCreator.createFilterTable(etfFilterName);
-                etf.executeEditingTypeFilter(etfFilterName, rawFilterName, "A", "G");
-                DatabaseManager.getInstance().distinctTable(etfFilterName);
-
-                QualityControlFilter qcf = new QualityControlFilter(manager);
-                TableCreator.createFilterTable(qcFilterName);
-                qcf.executeQCFilter(etfFilterName, qcFilterName, 20, 6);
-                DatabaseManager.getInstance().distinctTable(qcFilterName);
-
-                if (!denovo) {
-                    DNARNAFilter drf = new DNARNAFilter(manager);
-                    TableCreator.createFilterTable(drFilterName);
-                    drf.executeDnaRnaFilter(drFilterName, dnavcfTableName, etfFilterName);
-                    DatabaseManager.getInstance().distinctTable(drFilterName);
-
-                    LikelihoodRatioFilter llrf = new LikelihoodRatioFilter(manager);
-                    TableCreator.createFilterTable(llrFilterName);
-                    llrf.executeLLRFilter(llrFilterName, dnavcfTableName, drFilterName, 4);
-                    DatabaseManager.getInstance().distinctTable(llrFilterName);
-
-                    KnownSNPFilter ksf = new KnownSNPFilter(manager);
-                    TableCreator.createFilterTable(ksfFilterName);
-                    ksf.executeDbSNPFilter(DatabaseManager.DBSNP_DATABASE_TABLE_NAME, ksfFilterName, llrFilterName);
-                    DatabaseManager.getInstance().distinctTable(ksfFilterName);
-                } else {
-                    KnownSNPFilter ksf = new KnownSNPFilter(manager);
-                    TableCreator.createFilterTable(ksfFilterName);
-                    ksf.executeDbSNPFilter(DatabaseManager.DBSNP_DATABASE_TABLE_NAME, ksfFilterName, qcFilterName);
-                    DatabaseManager.getInstance().distinctTable(ksfFilterName);
-                }
-
-                SpliceJunctionFilter sjf = new SpliceJunctionFilter(manager);
-                TableCreator.createFilterTable(sjFilterName);
-                sjf.executeSpliceJunctionFilter(DatabaseManager.SPLICE_JUNCTION_TABLE_NAME, sjFilterName, ksfFilterName, 2);
-                DatabaseManager.getInstance().distinctTable(sjFilterName);
-
-                RepeatRegionsFilter rrf = new RepeatRegionsFilter(manager);
-                TableCreator.createFilterTable(rrFilterName);
-                TableCreator.createFilterTable(aluFilterName);
-                rrf.executeRepeatFilter(DatabaseManager.REPEAT_MASKER_TABLE_NAME, rrFilterName, aluFilterName, sjFilterName);
-                DatabaseManager.getInstance().distinctTable(rrFilterName);
-
-                FisherExactTestFilter fetf = new FisherExactTestFilter(manager);
-                TableCreator.createFisherExactTestTable(fetFilterName);
-                fetf.executeFDRFilter(DatabaseManager.DARNED_DATABASE_TABLE_NAME, fetFilterName, llrFilterName, RSCRIPT, 0.05, 0.05);
-                DatabaseManager.getInstance().distinctTable(fetFilterName);
-
-                endTime = Timer.getCurrentTime();
-                p.println("End performing filters at :\t" + endTime);
-                p.println("Filter performance lasts for :\t" + Timer.calculateInterval(startTime, endTime));
-
-                p.flush();
-            }
-            String logName;
-            if (rnaVCFSampleNames.length == 1) {
-                logName = rnaVCFSampleNames[0];
-            } else {
-                logName = "multi_samples";
-            }
-            String logFile = logPath + "/" + logName + "_" + (denovo ? "denovo" : "dnarna") + "_" + Timer.getExportTime() + ".log";
-            try {
-                if (!tempFile.renameTo(new File(logFile))) {
-                    throw new IOException("Temp file '" + tempFile.getAbsolutePath() + "' can not be renamed. Make sure you have the file permission.");
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-                return;
-            }
-            p.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            return;
         }
-        if (EXPORT.length() != 0) {
-            try {
-                exportData(resultPath, EXPORT.split(","), DATABASE);
-            } catch (IOException e) {
-                e.printStackTrace();
+
+        if (REPEAT.length() != 0) {
+            new RepeatMaskerParser(manager).loadRepeatTable(REPEAT);
+        }
+        if (SPLICE.length() != 0) {
+            new GTFParser(manager).loadSpliceJunctionTable(SPLICE);
+        }
+        if (DBSNP.length() != 0) {
+            new DBSNPParser(manager).loadDbSNPTable(DBSNP);
+        }
+        if (DARNED.length() != 0) {
+            new DARNEDParser(manager).loadDarnedTable(DARNED);
+        }
+
+        String endTime = Timer.getCurrentTime();
+        logger.info("End importing data :\t" + endTime);
+        logger.info("Data import lasts for :\t" + Timer.calculateInterval(startTime, endTime));
+
+        char[] charOrders = ORDER.toCharArray();
+        int[] intOrders = new int[charOrders.length];
+        for (int i = 0, len = charOrders.length; i < len; i++) {
+            intOrders[i] = charOrders[i] - '0';
+        }
+        List<Filter> filters = new LinkedList<Filter>();
+        filters.add(new EditingTypeFilter(manager));
+        filters.add(new QualityControlFilter(manager));
+        if (!denovo) {
+            filters.add(new DNARNAFilter(manager));
+        }
+        filters.add(new SpliceJunctionFilter(manager));
+        filters.add(new RepeatRegionsFilter(manager));
+        filters.add(new KnownSNPFilter(manager));
+        if (!denovo) {
+            filters.add(new LikelihoodRatioFilter(manager));
+        }
+        filters.add(new FisherExactTestFilter(manager));
+
+        sortFilters(filters, intOrders);
+
+        for (String sample : rnaVCFSampleNames) {
+            // First, print base information of all data.
+
+            logger.info("------------------------ Sample name : " + sample + " ------------------------");
+            if (!denovo) {
+                logger.info("Mode :\tDNA-RNA Mode");
+                logger.info("DNA VCF File :\t" + DNAVCF);
+            } else {
+                logger.info("Mode :\tde novo Mode");
             }
+            logger.info("RNA VCF File :\t" + RNAVCF);
+            logger.info("DARNED File :\t" + DARNED);
+            logger.info("Splice Junction File :\t" + SPLICE);
+            logger.info("Repeat Masker File :\t" + REPEAT);
+            logger.info("dbSNP File :\t" + DBSNP);
+            logger.info("RScript Path :\t" + RSCRIPT);
+
+            startTime = Timer.getCurrentTime();
+            logger.info("Start performing filters at :\t" + startTime);
+
+            String rawFilterName = sample + "_" + DatabaseManager.RNA_VCF_RESULT_TABLE_NAME;
+            String dnavcfTableName = sample + "_" + DatabaseManager.DNA_VCF_RESULT_TABLE_NAME;
+
+            for (int i = 0, len = filters.size(); i < len; i++) {
+                String previousFilterName;
+                String currentFilterName = filters.get(i).getName();
+                String previousTable;
+                String currentTable;
+                if (i == 0) {
+                    previousFilterName = rawFilterName;
+                    previousTable = rawFilterName;
+                    currentTable = previousFilterName + "_" + currentFilterName;
+                } else {
+                    previousFilterName = filters.get(i - 1).getName();
+                    if (i == 1) {
+                        previousTable = rawFilterName + "_" + previousFilterName;
+                    } else {
+                        previousTable = sample + "_" + filters.get(i - 2).getName() + "_" + previousFilterName;
+                    }
+                    currentTable = sample + "_" + previousFilterName + "_" + currentFilterName;
+                }
+                String[] arguments;
+                if (currentFilterName.equals(DatabaseManager.EDITING_TYPE_FILTER_RESULT_TABLE_NAME)) {
+                    arguments = new String[]{"A", "G"};
+                } else if (currentFilterName.equals(DatabaseManager.QC_FILTER_RESULT_TABLE_NAME)) {
+                    arguments = new String[]{"20", "6"};
+                } else if (currentFilterName.equals(DatabaseManager.DNA_RNA_FILTER_RESULT_TABLE_NAME)) {
+                    arguments = new String[]{dnavcfTableName};
+                } else if (currentFilterName.equals(DatabaseManager.SPLICE_JUNCTION_FILTER_RESULT_TABLE_NAME)) {
+                    arguments = new String[]{"2"};
+                } else if (currentFilterName.equals(DatabaseManager.REPEAT_FILTER_RESULT_TABLE_NAME)) {
+                    arguments = new String[0];
+                } else if (currentFilterName.equals(DatabaseManager.DBSNP_FILTER_RESULT_TABLE_NAME)) {
+                    arguments = new String[0];
+                } else if (currentFilterName.equals(DatabaseManager.LLR_FILTER_RESULT_TABLE_NAME)) {
+                    arguments = new String[]{dnavcfTableName, "4"};
+                } else if (currentFilterName.equals(DatabaseManager.FET_FILTER_RESULT_TABLE_NAME)) {
+                    arguments = new String[]{RSCRIPT, "0.05", "0.05"};
+                } else {
+                    logger.error("Unknown current table : {}", currentFilterName);
+                    throw new IllegalArgumentException();
+                }
+                filters.get(i).performFilter(previousTable, currentTable, arguments);
+            }
+            endTime = Timer.getCurrentTime();
+            logger.info("End performing filters :\t" + endTime);
+            logger.info("Filter performance lasts for :\t" + Timer.calculateInterval(startTime, endTime));
+
+        }
+
+        if (EXPORT.length() != 0) {
+            exportData(resultPath, EXPORT.split(","), DATABASE);
         }
     }
 
@@ -526,14 +469,15 @@ public class REDRunner {
                 "--rscript=/usr/bin/Rscript";
     }
 
-    public static void exportData(File resultPath, String[] columns, String databaseName) throws IOException {
+    public static void exportData(File resultPath, String[] columns, String databaseName) {
         DatabaseManager databaseManager = DatabaseManager.getInstance();
         List<String> currentTables;
         try {
             databaseManager.useDatabase(databaseName);
             currentTables = DatabaseManager.getInstance().getCurrentTables(databaseName);
         } catch (SQLException e) {
-            throw new NullPointerException("Could not get the tables from database '" + databaseName + "'");
+            logger.error("Could not get the tables from database '" + databaseName + "'", e);
+            return;
         }
         for (String currentTable : currentTables) {
             if (currentTable.contains(DatabaseManager.FET_FILTER_RESULT_TABLE_NAME)) {
@@ -547,11 +491,16 @@ public class REDRunner {
                 } else {
                     builder.append("_dnarna");
                 }
-                System.out.println("Export data for : " + builder.toString());
+                logger.info("Export data for : " + builder.toString());
                 builder.append(".txt");
                 File f = new File(resultPath + File.separator + builder.toString());
-                PrintWriter pw = new PrintWriter(new FileWriter(f));
-                //                    pw.println("pos");
+                PrintWriter pw;
+                try {
+                    pw = new PrintWriter(new FileWriter(f));
+                } catch (IOException e) {
+                    logger.error("Error open the print writer at: " + f.getAbsolutePath(), e);
+                    return;
+                }
                 ResultSet rs;
                 if (columns.length == 1 && columns[0].equalsIgnoreCase("all")) {
                     rs = databaseManager.query(currentTable, null, null, null);
@@ -559,7 +508,8 @@ public class REDRunner {
                     try {
                         columnNames = databaseManager.getColumnNames(databaseName, currentTable);
                     } catch (SQLException e) {
-                        throw new NullPointerException("Could not get the column names from table '" + currentTable + "'");
+                        logger.error("Could not get the column names from table '" + currentTable + "'", e);
+                        return;
                     }
 
                     builder = new StringBuilder();
@@ -577,7 +527,17 @@ public class REDRunner {
                             pw.println(builder.toString().trim());
                         }
                     } catch (SQLException e) {
-                        e.printStackTrace();
+                        logger.warn("No results", e);
+                    }
+                } else if (columns.length == 1 && columns[0].equalsIgnoreCase("annotation")) {
+                    pw.println("pos");
+                    rs = databaseManager.query(currentTable, new String[]{"chrom", "pos", "ref", "alt"}, null, null);
+                    try {
+                        while (rs.next()) {
+                            pw.println(rs.getString(1) + "\t" + rs.getInt(2) + "\t" + rs.getInt(2) + "\t" + rs.getString(3) + "\t" + rs.getString(4));
+                        }
+                    } catch (SQLException e) {
+                        logger.warn("No results", e);
                     }
                 } else {
                     rs = databaseManager.query(currentTable, columns, null, null);
@@ -596,13 +556,41 @@ public class REDRunner {
                             pw.println(builder.toString().trim());
                         }
                     } catch (SQLException e) {
-                        e.printStackTrace();
+                        logger.warn("No results", e);
                     }
                 }
                 pw.flush();
                 pw.close();
             }
         }
+    }
 
+
+    public static void sortFilters(List<Filter> filters, int[] orders) {
+        if (filters.size() != orders.length) {
+            logger.error("The number of the filters did not fit for the number of the order", new IllegalArgumentException());
+            return;
+        }
+        logger.info("Sort the filter by the order list.");
+        for (int i = 0, len = orders.length; i < len; i++) {
+            int index = orders[i] - 1;
+            if (index == i || index == -1) {
+                continue;
+            }
+            int tmp = orders[i];
+            orders[i] = orders[index];
+            orders[index] = tmp;
+
+            Filter leftFilter = filters.get(i);
+            Filter rightFilter = filters.get(index);
+            filters.set(index, leftFilter);
+            filters.set(i, rightFilter);
+        }
+
+        for (int i = orders.length - 1; i >= 0; i--) {
+            if (orders[i] == 0) {
+                filters.remove(i);
+            }
+        }
     }
 }
