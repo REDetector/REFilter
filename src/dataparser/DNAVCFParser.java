@@ -20,6 +20,8 @@ package dataparser;
 
 
 import database.DatabaseManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import utils.Indexer;
 import utils.Timer;
 
@@ -38,6 +40,7 @@ import java.util.Arrays;
 public class DNAVCFParser {
     public static final String VCF_CHROM = "CHROM";
     public static final String VCF_POS = "POS";
+    private static final Logger logger = LoggerFactory.getLogger(DNAVCFParser.class);
     //    public static final String VCF_ID = "ID";
     //    public static final String VCF_REF = "REF";
     //    public static final String VCF_ALT = "ALT";
@@ -45,7 +48,6 @@ public class DNAVCFParser {
     //    public static final String VCF_FILTER = "FILTER";
     //    public static final String VCF_INFO = "INFO";
     //    public static final String VCF_FORMAT = "FORMAT";
-
     //    private int chromColumn = 0;
     //    private int posColumn = 1;
     //    private int idColumn = 2;
@@ -69,7 +71,7 @@ public class DNAVCFParser {
     }
 
     public void parseMultiVCFFile(String vcfPath) {
-        System.out.println("Start Parsing DNA VCF file..." + " " + Timer.getCurrentTime());
+        logger.info("Start parsing DNA VCF file..." + " " + Timer.getCurrentTime());
         BufferedReader bufferedReader = null;
         StringBuilder sqlClause = null;
         try {
@@ -94,6 +96,7 @@ public class DNAVCFParser {
                     continue;
                 }
                 if (sampleNames == null) {
+                    logger.error("There are no samples in this vcf file.");
                     throw new NullPointerException("There are no samples in this vcf file.");
                 }
 
@@ -187,20 +190,19 @@ public class DNAVCFParser {
             databaseManager.commit();
             databaseManager.setAutoCommit(true);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Error open file: " + vcfPath, e);
         } catch (SQLException e) {
-            System.err.println("Error execute sql clause: " + sqlClause);
-            e.printStackTrace();
+            logger.error("Error execute sql clause: " + sqlClause, e);
         } finally {
             if (bufferedReader != null) {
                 try {
                     bufferedReader.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    logger.error("Error close the buffered reader.", e);
                 }
             }
         }
-        System.out.println("End Parsing DNA VCF file..." + Timer.getCurrentTime());
+        logger.info("End parsing DNA VCF file..." + Timer.getCurrentTime());
     }
 
 }

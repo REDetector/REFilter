@@ -19,12 +19,17 @@
 package filter.dnarna;
 
 import database.DatabaseManager;
+import database.TableCreator;
 import datatypes.SiteBean;
+import filter.Filter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import utils.Timer;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -32,21 +37,29 @@ import java.util.List;
  */
 
 
-public class LikelihoodRatioFilter {
+public class LikelihoodRatioFilter implements Filter {
+    private static final Logger logger = LoggerFactory.getLogger(LikelihoodRatioFilter.class);
     private DatabaseManager databaseManager;
 
     public LikelihoodRatioFilter(DatabaseManager databaseManager) {
         this.databaseManager = databaseManager;
     }
 
-    public void executeLLRFilter(String llrResultTable, String dnaVcfTable, String refTable, double threshold) {
+    @Override
+    public void performFilter(String previousTable, String currentTable, String[] args) {
+        if (args == null || args.length == 0) {
+            return;
+        } else if (args.length != 2) {
+            throw new IllegalArgumentException("Args " + Arrays.asList(args) + " for Likelihood Ratio Test Filter are incomplete, please have a check");
+        }
+        String dnaVcfTable = args[0];
+        double threshold = Double.parseDouble(args[1]);
+        TableCreator.createFilterTable(previousTable, currentTable);
+        logger.info("Start performing Likelihood Ratio Test Filter...\t" + Timer.getCurrentTime());
         try {
-            System.out.println("Start executing LikelihoodRatioFilter..." + Timer.getCurrentTime());
-            ResultSet rs = databaseManager.query("select " + refTable + ".chrom," + refTable + ".pos," + refTable + ".AD," +
-                    "" + dnaVcfTable + ".qual from " + refTable + "," + dnaVcfTable + " WHERE " + refTable + ".chrom=" + dnaVcfTable + ".chrom AND " +
-                    refTable + ".pos=" + dnaVcfTable + ".pos");
-            //            ResultSet rs = databaseManager.query(refTable + "," + dnaVcfTable, new String[]{refTable + ".chrom", refTable + ".pos", refTable + ".AD",
-            //                    dnaVcfTable + ".qual"}, refTable + ".chrom = ? AND " + refTable + ".pos = ? ", new String[]{dnaVcfTable + ".chrom", dnaVcfTable + ".pos"});
+            ResultSet rs = databaseManager.query("select " + previousTable + ".chrom," + previousTable + ".pos," + previousTable + ".AD," +
+                    "" + dnaVcfTable + ".qual from " + previousTable + "," + dnaVcfTable + " WHERE " + previousTable + ".chrom=" + dnaVcfTable + ".chrom AND " +
+                    previousTable + ".pos=" + dnaVcfTable + ".pos");
             List<SiteBean> siteBeans = new ArrayList<SiteBean>();
             while (rs.next()) {
                 String chr = rs.getString(1);
@@ -70,7 +83,7 @@ public class LikelihoodRatioFilter {
                     y = Math.log(y) / Math.log(10.0);
                     double judge = y + siteBean.getQual() / 10.0;
                     if (judge >= threshold) {
-                        databaseManager.insertClause("insert into " + llrResultTable + " select * from " + refTable + " where chrom='" + siteBean.getChr() +
+                        databaseManager.insertClause("insert into " + currentTable + " select * from " + previousTable + " where chrom='" + siteBean.getChr() +
                                 "' and pos=" + siteBean.getPos());
                         if (++count % DatabaseManager.COMMIT_COUNTS_PER_ONCE == 0) {
                             databaseManager.commit();
@@ -82,11 +95,13 @@ public class LikelihoodRatioFilter {
             databaseManager.setAutoCommit(true);
 
         } catch (SQLException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            logger.error("Error execute sql clause in " + LikelihoodRatioFilter.class.getName() + ":performFilter()", e);
         }
-        System.out.println("End executing LikelihoodRatioFilter..." + Timer.getCurrentTime());
-
+        logger.info("End performing Likelihood Ratio Test Filter...\t" + Timer.getCurrentTime());
     }
 
+    @Override
+    public String getName() {
+        return DatabaseManager.LLR_FILTER_RESULT_TABLE_NAME;
+    }
 }

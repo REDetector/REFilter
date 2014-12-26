@@ -19,59 +19,53 @@
 package filter.denovo;
 
 import database.DatabaseManager;
+import database.TableCreator;
+import filter.Filter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import utils.Timer;
 
 import java.sql.SQLException;
+import java.util.Arrays;
 
 /**
  * Comphrehensive phase we focus on base in exon we discard base in the rear or front of the sequence
  */
 
 
-public class SpliceJunctionFilter {
+public class SpliceJunctionFilter implements Filter {
+    private static final Logger logger = LoggerFactory.getLogger(SpliceJunctionFilter.class);
     private DatabaseManager databaseManager;
 
     public SpliceJunctionFilter(DatabaseManager databaseManager) {
         this.databaseManager = databaseManager;
     }
 
-    public boolean hasEstablishedSpliceJunctionTable(String spliceJunctionTable) {
+    @Override
+    public void performFilter(String previousTable, String currentTable, String[] args) {
+        if (args == null || args.length == 0) {
+            return;
+        } else if (args.length != 1) {
+            throw new IllegalArgumentException("Args " + Arrays.asList(args) + " for Splice Junction Filter are incomplete, please have a check");
+        }
+        TableCreator.createFilterTable(previousTable, currentTable);
+        logger.info("Start performing Splice Junction Filter...\t" + Timer.getCurrentTime());
+        String spliceJunctionTable = DatabaseManager.SPLICE_JUNCTION_TABLE_NAME;
+        int edge = Integer.parseInt(args[0]);
         try {
-            return databaseManager.calRowCount(spliceJunctionTable) > 0;
+            databaseManager.executeSQL("insert into " + currentTable + " select * from " + previousTable + " where not exists (select chrom from "
+                    + spliceJunctionTable + " where (" + spliceJunctionTable + ".type='CDS' and " + spliceJunctionTable + ".chrom=" + previousTable + ".chrom" +
+                    " and ((" + spliceJunctionTable + ".begin<" + previousTable + ".pos+" + edge + " and " + spliceJunctionTable + ".begin>" + previousTable + "" +
+                    ".pos-" + edge + ") or (" + spliceJunctionTable + ".end<" + previousTable + ".pos+" + edge + " and " + spliceJunctionTable + ".end>"
+                    + previousTable + ".pos-" + edge + "))))");
         } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
+            logger.error("Error execute sql clause in" + SpliceJunctionFilter.class.getName() + ":performFilter()", e);
         }
+        logger.info("End performing Splice Junction Filter...\t" + Timer.getCurrentTime());
     }
 
-    public void loadSpliceJunctionTable(String spliceJunctionTable, String spliceJunctionPath) {
-        System.out.println("Start loading SpliceJunctionTable..." + Timer.getCurrentTime());
-        if (!hasEstablishedSpliceJunctionTable(spliceJunctionTable)) {
-            try {
-                databaseManager.executeSQL("load data local infile '" + spliceJunctionPath + "' into table " + spliceJunctionTable + " fields terminated" +
-                        " by '\t' lines terminated by '\n'");
-            } catch (SQLException e) {
-                System.err.println("Error execute sql clause in " + SpliceJunctionFilter.class.getName() + ":loadSpliceJunctionTable()..");
-                e.printStackTrace();
-            }
-        }
-
-        System.out.println("End loading SpliceJunctionTable..." + Timer.getCurrentTime());
+    @Override
+    public String getName() {
+        return DatabaseManager.SPLICE_JUNCTION_FILTER_RESULT_TABLE_NAME;
     }
-
-    public void executeSpliceJunctionFilter(String spliceJunctionTable, String spliceJunctionResultTable, String refTable, int edge) {
-        System.out.println("Start executing SpliceJunctionFilter..." + Timer.getCurrentTime());
-        try {
-            databaseManager.executeSQL("insert into " + spliceJunctionResultTable + " select * from " + refTable + " where not exists (select chrom from "
-                    + spliceJunctionTable + " where (" + spliceJunctionTable + ".type='CDS' and " + spliceJunctionTable + ".chrom=" + refTable + ".chrom" +
-                    " and ((" + spliceJunctionTable + ".begin<" + refTable + ".pos+" + edge + " and " + spliceJunctionTable + ".begin>" + refTable + "" +
-                    ".pos-" + edge + ") or (" + spliceJunctionTable + ".end<" + refTable + ".pos+" + edge + " and " + spliceJunctionTable + ".end>"
-                    + refTable + ".pos-" + edge + "))))");
-        } catch (SQLException e) {
-            System.err.println("Error execute sql clause in" + SpliceJunctionFilter.class.getName() + ":executeSpliceJunctionFilter()");
-            e.printStackTrace();
-        }
-        System.out.println("End executing SpliceJunctionFilter..." + Timer.getCurrentTime());
-    }
-
 }

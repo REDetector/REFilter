@@ -23,85 +23,34 @@ package filter.denovo;
  */
 
 import database.DatabaseManager;
+import database.TableCreator;
 import datatypes.SiteBean;
+import filter.Filter;
 import net.sf.snver.pileup.util.math.FisherExact;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import rcaller.RCaller;
 import rcaller.RCode;
 import utils.Timer;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-public class FisherExactTestFilter {
+public class FisherExactTestFilter implements Filter {
+    private static final Logger logger = LoggerFactory.getLogger(FisherExactTestFilter.class);
     private DatabaseManager databaseManager;
 
     public FisherExactTestFilter(DatabaseManager databaseManager) {
         this.databaseManager = databaseManager;
     }
 
-    public boolean hasEstablishedDarnedTable(String darnedTable) {
-        try {
-            return databaseManager.calRowCount(darnedTable) > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    public void loadDarnedTable(String darnedTable, String darnedPath) {
-        System.out.println("Start loading DARNED database..." + Timer.getCurrentTime());
-        if (!hasEstablishedDarnedTable(darnedTable)) {
-            try {
-                int count = 0;
-                databaseManager.setAutoCommit(false);
-                FileInputStream inputStream = new FileInputStream(darnedPath);
-                BufferedReader rin = new BufferedReader(new InputStreamReader(inputStream));
-                String line;
-                // Skip the first row.
-                rin.readLine();
-                while ((line = rin.readLine()) != null) {
-                    String[] sections = line.trim().split("\\t");
-                    StringBuilder stringBuilder = new StringBuilder("insert into ");
-                    stringBuilder.append(darnedTable);
-                    stringBuilder.append("(chrom,coordinate,strand,inchr,inrna) values(");
-                    for (int i = 0; i < 5; i++) {
-                        if (i == 0) {
-                            stringBuilder.append("'chr").append(sections[i]).append("',");
-                        } else if (i == 1) {
-                            stringBuilder.append(sections[i]).append(",");
-                        } else {
-                            stringBuilder.append("'").append(sections[i]).append("',");
-                        }
-                    }
-                    stringBuilder.deleteCharAt(stringBuilder.length() - 1).append(")");
-
-                    databaseManager.executeSQL(stringBuilder.toString());
-                    if (++count % DatabaseManager.COMMIT_COUNTS_PER_ONCE == 0)
-                        databaseManager.commit();
-                }
-                databaseManager.commit();
-                databaseManager.setAutoCommit(true);
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                System.err.println("Error load file from " + darnedPath + " to file stream");
-                e.printStackTrace();
-            } catch (SQLException e) {
-                System.err.println("Error execute sql clause in " + FisherExactTestFilter.class.getName() + ":loadDarnedTable()");
-                e.printStackTrace();
-            }
-        }
-        System.out.println("End loading DARNED database..." + Timer.getCurrentTime());
-    }
-
-    private List<PValueInfo> getExpectedInfo(String darnedTable, String refTable) {
+    private List<PValueInfo> getExpectedInfo(String refTable) {
         List<PValueInfo> valueInfos = new ArrayList<PValueInfo>();
+        String darnedTable = DatabaseManager.DARNED_DATABASE_TABLE_NAME;
         try {
             ResultSet rs = databaseManager.query(refTable, null, null, null);
             while (rs.next()) {
@@ -130,15 +79,14 @@ public class FisherExactTestFilter {
             return valueInfos;
 
         } catch (SQLException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
             return null;
         }
     }
 
-    private List<PValueInfo> executeFETFilter(String darnedTable, String fetResultTable, String refTable) {
-        System.out.println("Start executing Fisher Exact Test Filter..." + Timer.getCurrentTime());
-        List<PValueInfo> valueInfos = getExpectedInfo(darnedTable, refTable);
+    private List<PValueInfo> executeFETFilter(String fetResultTable, String refTable) {
+        logger.info("Start performing Fisher's Exact Test Filter...\t" + Timer.getCurrentTime());
+        List<PValueInfo> valueInfos = getExpectedInfo(refTable);
         int knownAlt = 0;
         int knownRef = 0;
         for (PValueInfo info : valueInfos) {
@@ -164,52 +112,68 @@ public class FisherExactTestFilter {
                 databaseManager.executeSQL("insert into " + fetResultTable + "(chrom,pos,id,ref,alt,qual,filter,info,gt,ad,dp,gq,pl,alu,level,pvalue) " +
                         "values( " + pValueInfo.toString() + "," + dF.format(level) + "," + pValue + ")");
             } catch (SQLException e) {
-                System.err.println("Error execute sql clause in " + FisherExactTestFilter.class.getName() + ":executeFETFilter()");
-                e.printStackTrace();
+                logger.error("Error execute sql clause in " + FisherExactTestFilter.class.getName() + ":executeFETFilter()", e);
                 return new ArrayList<PValueInfo>();
             }
         }
-        System.out.println("End executing Fisher Exact Test Filter..." + Timer.getCurrentTime());
+        logger.info("End performing Fisher's Exact Test Filter...\t" + Timer.getCurrentTime());
         return valueInfos;
     }
 
-    public void executeFDRFilter(String darnedTable, String darnedResultTable, String refTable, String rScript, double pvalueThreshold, double fdrThreshold) {
-        System.out.println("Start executing FDRFilter..." + Timer.getCurrentTime());
+
+    @Override
+    public void performFilter(String previousTable, String currentTable, String[] args) {
+        if (args == null || args.length == 0) {
+            return;
+        } else if (args.length != 3) {
+            logger.error("Args " + Arrays.asList(args) + " for Fisher's Exact Test Filter are incomplete, please have a check");
+            throw new IllegalArgumentException("Args " + Arrays.asList(args) + " for Fisher's Exact Test Filter are incomplete, please have a check");
+        }
+        String rScript = args[0];
+        double pvalueThreshold = Double.parseDouble(args[1]);
+        double fdrThreshold = Double.parseDouble(args[2]);
+        TableCreator.createFisherExactTestTable(previousTable, currentTable);
+        logger.info("Start performing False Discovery Rate Filter...\t" + Timer.getCurrentTime());
+        RCaller caller = new RCaller();
+        if (rScript.trim().toLowerCase().contains("script")) {
+            caller.setRscriptExecutable(rScript);
+        } else {
+            caller.setRExecutable(rScript);
+        }
+        RCode code = new RCode();
+        List<PValueInfo> pValueList = executeFETFilter(currentTable, previousTable);
+        double[] pValueArray = new double[pValueList.size()];
+        for (int i = 0, len = pValueList.size(); i < len; i++) {
+            pValueArray[i] = pValueList.get(i).getPvalue();
+        }
+        code.addDoubleArray("parray", pValueArray);
+        code.addRCode("result<-p.adjust(parray,method='fdr',length(parray))");
+        caller.setRCode(code);
+        if (rScript.trim().toLowerCase().contains("script")) {
+            caller.runAndReturnResult("result");
+        } else {
+            caller.runAndReturnResultOnline("result");
+        }
+        double[] results = caller.getParser().getAsDoubleArray("result");
+        caller.deleteTempFiles();
+        databaseManager.setAutoCommit(false);
         try {
-            RCaller caller = new RCaller();
-            if (rScript.trim().toLowerCase().contains("script")) {
-                caller.setRscriptExecutable(rScript);
-            } else {
-                caller.setRExecutable(rScript);
-            }
-            RCode code = new RCode();
-            List<PValueInfo> pValueList = executeFETFilter(darnedTable, darnedResultTable, refTable);
-            double[] pValueArray = new double[pValueList.size()];
-            for (int i = 0, len = pValueList.size(); i < len; i++) {
-                pValueArray[i] = pValueList.get(i).getPvalue();
-            }
-            code.addDoubleArray("parray", pValueArray);
-            code.addRCode("result<-p.adjust(parray,method='fdr',length(parray))");
-            caller.setRCode(code);
-            if (rScript.trim().toLowerCase().contains("script")) {
-                caller.runAndReturnResult("result");
-            } else {
-                caller.runAndReturnResultOnline("result");
-            }
-            double[] results = caller.getParser().getAsDoubleArray("result");
-            caller.deleteTempFiles();
-            databaseManager.setAutoCommit(false);
             for (int i = 0, len = results.length; i < len; i++) {
-                databaseManager.executeSQL("update " + darnedResultTable + " set fdr=" + results[i] + " where chrom='" + pValueList.get(i).getChr() + "' " +
+                databaseManager.executeSQL("update " + currentTable + " set fdr=" + results[i] + " where chrom='" + pValueList.get(i).getChr() + "' " +
                         "and pos=" + pValueList.get(i).getPos());
             }
             databaseManager.commit();
             databaseManager.setAutoCommit(true);
-            databaseManager.executeSQL("delete from " + darnedResultTable + " where (pvalue > " + pvalueThreshold + ") || (fdr > " + fdrThreshold + ")");
-        } catch (Exception e) {
+            databaseManager.executeSQL("delete from " + currentTable + " where (pvalue > " + pvalueThreshold + ") || (fdr > " + fdrThreshold + ")");
+        } catch (SQLException e) {
             e.printStackTrace();
         }
-        System.out.println("End executing FDRFilter..." + Timer.getCurrentTime());
+        logger.info("Start performing False Discovery Rate Filter...\t" + Timer.getCurrentTime());
+    }
+
+    @Override
+    public String getName() {
+        return DatabaseManager.FET_FILTER_RESULT_TABLE_NAME;
     }
 
     private class PValueInfo extends SiteBean {

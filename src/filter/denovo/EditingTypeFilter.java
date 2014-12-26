@@ -20,27 +20,42 @@ package filter.denovo;
 
 
 import database.DatabaseManager;
+import database.TableCreator;
+import filter.Filter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import utils.Timer;
 
 import java.sql.SQLException;
+import java.util.Arrays;
 
 /**
  * Created by Administrator on 2014/9/29.
  */
-public class EditingTypeFilter {
+public class EditingTypeFilter implements Filter {
+    private static final Logger logger = LoggerFactory.getLogger(EditingTypeFilter.class);
     private DatabaseManager databaseManager;
 
     public EditingTypeFilter(DatabaseManager databaseManager) {
         this.databaseManager = databaseManager;
     }
 
-    public void executeEditingTypeFilter(String specificTable, String rnaVcfTable, String ref, String alt) {
-        System.out.println("Start executing Editing Type Filter..." + Timer.getCurrentTime());
+    @Override
+    public void performFilter(String previousTable, String currentTable, String[] args) {
+        if (args == null || args.length == 0) {
+            return;
+        } else if (args.length != 2) {
+            throw new IllegalArgumentException("Args " + Arrays.asList(args) + " for Editing Type Filter are incomplete, please have a check");
+        }
+        TableCreator.createFilterTable(previousTable,currentTable);
+        logger.info("Start executing Editing Type Filter..." + Timer.getCurrentTime());
+        String ref = args[0];
+        String alt = args[1];
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("insert into ");
-        stringBuilder.append(specificTable);
+        stringBuilder.append(currentTable);
         stringBuilder.append(" select * from ");
-        stringBuilder.append(rnaVcfTable);
+        stringBuilder.append(previousTable);
         stringBuilder.append(" WHERE REF='");
         stringBuilder.append(ref);
         stringBuilder.append("' AND ALT='");
@@ -49,10 +64,13 @@ public class EditingTypeFilter {
         try {
             databaseManager.insertClause(stringBuilder.toString());
         } catch (SQLException e) {
-            System.err.println("There is a syntax error for SQL clause: " + stringBuilder.toString());
-            e.printStackTrace();
+            logger.error("There is a syntax error for SQL clause: " + stringBuilder.toString(), e);
         }
-        System.out.println("End executing Editing Type Filter..." + Timer.getCurrentTime());
+        logger.info("End executing Editing Type Filter..." + Timer.getCurrentTime());
     }
 
+    @Override
+    public String getName() {
+        return DatabaseManager.EDITING_TYPE_FILTER_RESULT_TABLE_NAME;
+    }
 }

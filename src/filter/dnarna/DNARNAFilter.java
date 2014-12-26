@@ -19,34 +19,49 @@
 package filter.dnarna;
 
 import database.DatabaseManager;
+import database.TableCreator;
+import filter.Filter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import utils.Timer;
 
 import java.sql.SQLException;
+import java.util.Arrays;
 
 /**
  * Detect SNP in DNA level
  */
 
-public class DNARNAFilter {
+public class DNARNAFilter implements Filter {
+    private static final Logger logger = LoggerFactory.getLogger(DNARNAFilter.class);
     private DatabaseManager databaseManager;
 
     public DNARNAFilter(DatabaseManager databaseManager) {
         this.databaseManager = databaseManager;
     }
 
-    public void executeDnaRnaFilter(String dnaRnaResultTable, String dnaVcfTable, String refTable) {
-        System.out.println("Start executing DNARNAFilter..." + Timer.getCurrentTime());
-
-        try {
-            databaseManager.executeSQL("insert into " + dnaRnaResultTable + " select * from " + refTable + " where " +
-                    "exists (select chrom from " + dnaVcfTable + " where (" + dnaVcfTable + ".chrom=" + refTable +
-                    ".chrom and " + dnaVcfTable + ".pos=" + refTable + ".pos))");
-        } catch (SQLException e) {
-            // TODO Auto-generated catch block
-            System.err.println("Error execute sql clause in " + DNARNAFilter.class.getName() + ":executeDnaRnaFilter()");
-            e.printStackTrace();
+    @Override
+    public void performFilter(String previousTable, String currentTable, String[] args) {
+        if (args == null || args.length == 0) {
+            return;
+        } else if (args.length != 1) {
+            throw new IllegalArgumentException("Args " + Arrays.asList(args) + " for DNA-RNA Filter are incomplete, please have a check");
         }
-        System.out.println("End executing DNARNAFilter..." + Timer.getCurrentTime());
+        TableCreator.createFilterTable(previousTable, currentTable);
+        logger.info("Start performing DNA-RNA Filter...\t" + Timer.getCurrentTime());
+        String dnaVcfTable = args[0];
+        try {
+            databaseManager.executeSQL("insert into " + currentTable + " select * from " + previousTable + " where " +
+                    "exists (select chrom from " + dnaVcfTable + " where (" + dnaVcfTable + ".chrom=" + previousTable +
+                    ".chrom and " + dnaVcfTable + ".pos=" + previousTable + ".pos))");
+        } catch (SQLException e) {
+            logger.error("Error execute sql clause in " + DNARNAFilter.class.getName() + ":performFilter()", e);
+        }
+        logger.info("End performing DNA-RNA Filter...\t" + Timer.getCurrentTime());
     }
 
+    @Override
+    public String getName() {
+        return DatabaseManager.DNA_RNA_FILTER_RESULT_TABLE_NAME;
+    }
 }

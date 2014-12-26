@@ -23,73 +23,38 @@ package filter.denovo;
  */
 
 import database.DatabaseManager;
+import database.TableCreator;
+import filter.Filter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import utils.Timer;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.sql.SQLException;
 
-public class KnownSNPFilter {
+public class KnownSNPFilter implements Filter {
+    private static final Logger logger = LoggerFactory.getLogger(KnownSNPFilter.class);
     private DatabaseManager databaseManager;
-    private int count = 0;
 
     public KnownSNPFilter(DatabaseManager databaseManager) {
         this.databaseManager = databaseManager;
     }
 
-    public boolean hasEstablishDbSNPTable(String dbSnpTable) {
+    @Override
+    public void performFilter(String previousTable, String currentTable, String[] args) {
+        logger.info("Start performing Known SNP Filter...\t" + Timer.getCurrentTime());
+        TableCreator.createFilterTable(previousTable, currentTable);
+        String dbSnpTable = DatabaseManager.DBSNP_DATABASE_TABLE_NAME;
         try {
-            return databaseManager.calRowCount(dbSnpTable) > 0;
+            databaseManager.executeSQL("insert into " + currentTable + " select * from " + previousTable + " where not exists (select chrom from " +
+                    dbSnpTable + " where (" + dbSnpTable + ".chrom=" + previousTable + ".chrom and " + dbSnpTable + ".pos=" + previousTable + ".pos))");
         } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
+            logger.error("Error execute sql clause in" + KnownSNPFilter.class.getName() + ":performFilter()", e);
         }
+        logger.info("End performing Known SNP Filter...\t" + Timer.getCurrentTime());
     }
 
-    public void loadDbSNPTable(String dbSNPTable, String dbSNPPath) {
-        System.out.println("Start loading dbSNPTable" + " " + Timer.getCurrentTime());
-        try {
-            if (!hasEstablishDbSNPTable(dbSNPTable)) {
-                FileInputStream inputStream = new FileInputStream(dbSNPPath);
-                BufferedReader rin = new BufferedReader(new InputStreamReader(
-                        inputStream));
-                String line;
-                while ((line = rin.readLine()) != null) {
-                    if (line.startsWith("#")) {
-                        count++;
-                    } else {
-                        break;
-                    }
-                }
-                rin.close();
-                databaseManager.executeSQL("load data local infile '" + dbSNPPath + "' into table " + dbSNPTable + "" +
-                        " fields terminated by '\t' lines terminated by '\n' IGNORE " + count + " LINES");
-            }
-
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            System.err.println("Error load file from " + dbSNPPath + " to file stream");
-            e.printStackTrace();
-        } catch (SQLException e) {
-            System.err.println("Error execute sql clause in " + KnownSNPFilter.class.getName() + ":loadDbSNPTable()");
-            e.printStackTrace();
-        }
-        System.out.println("End loading dbSNPTable" + " " + Timer.getCurrentTime());
+    @Override
+    public String getName() {
+        return DatabaseManager.DBSNP_FILTER_RESULT_TABLE_NAME;
     }
-
-    public void executeDbSNPFilter(String dbSnpTable, String dbSnpResultTable, String refTable) {
-        System.out.println("Start executing KnownSNPFilter..." + Timer.getCurrentTime());
-        try {
-            databaseManager.executeSQL("insert into " + dbSnpResultTable + " select * from " + refTable + " where " +
-                    "not exists (select chrom from " + dbSnpTable + " where (" + dbSnpTable + ".chrom=" + refTable +
-                    ".chrom and " + dbSnpTable + ".pos=" + refTable + ".pos))");
-        } catch (SQLException e) {
-            System.err.println("Error execute sql clause in" + KnownSNPFilter.class.getName() + ":executeDbSNPFilter()");
-            e.printStackTrace();
-        }
-        System.out.println("End executing KnownSNPFilter..." + Timer.getCurrentTime());
-    }
-
 }
