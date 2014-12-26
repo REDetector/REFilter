@@ -24,7 +24,6 @@ package utils;
 public class DatabasePreferences {
     private static DatabasePreferences databasePreferences = new DatabasePreferences();
 
-    private String databaseTableBuilder = "";
     private String currentDatabase = "";
 
     public static DatabasePreferences getInstance() {
@@ -38,14 +37,5 @@ public class DatabasePreferences {
     public void setCurrentDatabase(String currentDatabase) {
         this.currentDatabase = currentDatabase;
     }
-
-    public String getDatabaseTableBuilder() {
-        return databaseTableBuilder;
-    }
-
-    public void setDatabaseTableBuilder(String databaseTableBuilder) {
-        this.databaseTableBuilder = databaseTableBuilder;
-    }
-
 
 }
