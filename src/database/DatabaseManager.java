@@ -22,6 +22,8 @@ package database;
  * Linked to target database
  */
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import utils.DatabasePreferences;
 import utils.RandomStringGenerator;
 
@@ -44,11 +46,11 @@ public class DatabaseManager {
     public static final String REPEAT_FILTER_RESULT_TABLE_NAME = "rrfilter";
     public static final String DNA_RNA_FILTER_RESULT_TABLE_NAME = "drfilter";
     public static final String LLR_FILTER_RESULT_TABLE_NAME = "llrfilter";
-    public static final String ALU_FILTER_RESULT_TABLE_NAME = "alufilter";
     public static final String SPLICE_JUNCTION_TABLE_NAME = "splice_junction";
     public static final String DARNED_DATABASE_TABLE_NAME = "darned_database";
     public static final String REPEAT_MASKER_TABLE_NAME = "repeat_masker";
     public static final String DBSNP_DATABASE_TABLE_NAME = "dbsnp_database";
+    private static final Logger logger = LoggerFactory.getLogger(DatabaseManager.class);
     private static final DatabaseManager DATABASE_MANAGER = new DatabaseManager();
     private static Statement stmt;
     private Connection con = null;
@@ -60,11 +62,20 @@ public class DatabaseManager {
         return DATABASE_MANAGER;
     }
 
-    public boolean connectDatabase(String host, String port, String user, String password) throws ClassNotFoundException, SQLException {
+    public boolean connectDatabase(String host, String port, String user, String password) {
 
-        Class.forName("com.mysql.jdbc.Driver");
+        try {
+            Class.forName("com.mysql.jdbc.Driver");
+        } catch (ClassNotFoundException e) {
+            logger.error("The JDBC driver has not been found.", e);
+        }
+
         String connectionURL = "jdbc:mysql://" + host + ":" + port;
-        con = DriverManager.getConnection(connectionURL, user, password);
+        try {
+            con = DriverManager.getConnection(connectionURL, user, password);
+        } catch (SQLException e) {
+            logger.error("Database connection error.", e);
+        }
         return con != null;
     }
 
@@ -72,7 +83,7 @@ public class DatabaseManager {
         try {
             con.setAutoCommit(autoCommit);
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.warn("Can not set commit automatically");
         }
     }
 
@@ -80,8 +91,7 @@ public class DatabaseManager {
         try {
             con.commit();
         } catch (SQLException e) {
-            System.err.println("Error commit to database");
-            e.printStackTrace();
+            logger.error("Error commit to database", e);
         }
     }
 
@@ -95,13 +105,22 @@ public class DatabaseManager {
         }
     }
 
+    public boolean hasEstablishTable(String darnedTable) {
+        try {
+            return calRowCount(darnedTable) > 0;
+        } catch (SQLException e) {
+            logger.warn("", e);
+            return false;
+        }
+    }
+
     public void createDatabase(String databaseName) {
         try {
             Statement stmt = con.createStatement();
             stmt.executeUpdate("create database if not exists " + databaseName);
             stmt.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error("Error create database: " + databaseName, e);
         }
     }
 
@@ -134,7 +153,7 @@ public class DatabaseManager {
             stmt.executeUpdate("drop table if exists " + tableName);
             stmt.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error("Error delete table: " + tableName, e);
         }
     }
 
@@ -155,7 +174,7 @@ public class DatabaseManager {
             }
             stmt.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error("Error delete sample '" + sampleName + "' in database '" + database + "'", e);
         }
     }
 
@@ -193,7 +212,7 @@ public class DatabaseManager {
             stmt.executeUpdate("use " + databaseName);
             stmt.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.warn("Can not use the database: " + databaseName);
         }
     }
 
@@ -211,15 +230,14 @@ public class DatabaseManager {
     }
 
     public ResultSet query(String queryClause) {
-        ResultSet rs;
+        ResultSet rs = null;
         try {
             Statement stmt = con.createStatement();
             rs = stmt.executeQuery(queryClause);
-            return rs;
         } catch (SQLException e) {
-            e.printStackTrace();
-            return null;
+            logger.error("Can not get query results...", e);
         }
+        return rs;
     }
 
     public ResultSet query(String table, String[] columns, String selection, String[] selectionArgs) {
@@ -248,8 +266,7 @@ public class DatabaseManager {
                 rs = statement.executeQuery(stringBuilder.toString());
             }
         } catch (SQLException e) {
-            System.err.println("There is a syntax error: " + stringBuilder.toString());
-            e.printStackTrace();
+            logger.error("There is a syntax error: " + stringBuilder.toString(), e);
         }
         return rs;
     }
@@ -260,13 +277,11 @@ public class DatabaseManager {
                 con.close();
             }
         } catch (SQLException e) {
-            System.err.println("Error close database!");
-            e.printStackTrace();
+            logger.error("Error close database!", e);
         }
     }
 
     public boolean existTable(String tableName) throws SQLException {
-
         List<String> tableLists = getCurrentTables(DatabasePreferences.getInstance().getCurrentDatabase());
         return tableLists.contains(tableName);
     }
@@ -279,8 +294,7 @@ public class DatabaseManager {
             executeSQL("insert into " + resultTable + " select * from " + tempTable);
             deleteTable(tempTable);
         } catch (SQLException e) {
-            System.err.println("Error execute sql clause in " + DatabaseManager.class.getName() + ":distinctTable()");
-            e.printStackTrace();
+            logger.error("Error execute sql clause in " + DatabaseManager.class.getName() + ":distinctTable()", e);
         }
     }
 
