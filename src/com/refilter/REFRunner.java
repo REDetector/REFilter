@@ -16,17 +16,35 @@
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import database.DatabaseManager;
-import dataparser.*;
-import filter.Filter;
-import filter.denovo.*;
-import filter.dnarna.DNARNAFilter;
-import filter.dnarna.LikelihoodRatioFilter;
+package com.refilter;/*
+ * REFilter: RNA Editing Filter
+ *     Copyright (C) <2014>  <Xing Li>
+ *
+ *     REFilter is free software: you can redistribute it and/or modify
+ *     it under the terms of the GNU General Public License as published by
+ *     the Free Software Foundation, either version 3 of the License, or
+ *     (at your option) any later version.
+ *
+ *     REFilter is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU General Public License
+ *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+import com.refilter.database.DatabaseManager;
+import com.refilter.dataparser.*;
+import com.refilter.filter.Filter;
+import com.refilter.filter.denovo.*;
+import com.refilter.filter.dnarna.DNARNAFilter;
+import com.refilter.filter.dnarna.LikelihoodRatioFilter;
+import com.refilter.utils.DatabasePreferences;
+import com.refilter.utils.FileUtils;
+import com.refilter.utils.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import utils.DatabasePreferences;
-import utils.FileUtils;
-import utils.Timer;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -62,6 +80,7 @@ public class REFRunner {
     public static String DBSNP = "";
     public static String RSCRIPT = "/usr/bin/RScript";
     public static String ORDER = "12345678";
+    public static String LEVEL = "";
     private static Logger logger = LoggerFactory.getLogger(REFRunner.class);
 
     public static void main(String[] args) {
@@ -128,6 +147,9 @@ public class REFRunner {
                 case 'O':
                     ORDER = value;
                     break;
+                case 'l':
+                    LEVEL = value;
+                    break;
                 default:
                     logger.error("Unknown the argument '-" + key + "', please have a check.", new IllegalArgumentException());
                     return;
@@ -171,6 +193,8 @@ public class REFRunner {
                 DBSNP = value;
             } else if (key.equalsIgnoreCase("order")) {
                 ORDER = value;
+            } else if (key.equalsIgnoreCase("level")) {
+                LEVEL = value;
             } else {
                 logger.error("Unknown the argument '--" + key + "', please have a check.", new IllegalArgumentException());
                 return;
@@ -234,14 +258,20 @@ public class REFRunner {
         manager.createDatabase(DATABASE);
         manager.useDatabase(DATABASE);
 
-        File resultPath = new File(rootPath + File.separator + "results");
+        String resultPath = rootPath + File.separator + "results";
         if (!FileUtils.createDirectory(resultPath)) {
-            logger.error("Result path '{}' can not be created. Make sure you have the file permission.", resultPath.getAbsolutePath());
+            logger.error("Result path '{}' can not be created. Make sure you have the file permission.", resultPath);
             return;
         }
 
         if (EXPORT.length() != 0 && (RNAVCF.length() == 0 || (!denovo && DNAVCF.length() == 0))) {
-            exportData(resultPath, EXPORT.split(","), DATABASE);
+            String selection = null;
+            String[] selectionArgs = null;
+            if (LEVEL.length() != 0) {
+                selection = "level>=? AND level<?";
+                selectionArgs = LEVEL.split(",");
+            }
+            exportData(resultPath, DATABASE, EXPORT.split(","), selection, selectionArgs);
             return;
         }
 
@@ -388,11 +418,140 @@ public class REFRunner {
             endTime = Timer.getCurrentTime();
             logger.info("End performing filters :\t" + endTime);
             logger.info("Filter performance lasts for :\t" + Timer.calculateInterval(startTime, endTime));
-
         }
 
         if (EXPORT.length() != 0) {
-            exportData(resultPath, EXPORT.split(","), DATABASE);
+            String selection = null;
+            String[] selectionArgs = null;
+            if (LEVEL.length() != 0) {
+                selection = "level>=? AND level<?";
+                selectionArgs = LEVEL.split(",");
+            }
+            exportData(resultPath, DATABASE, EXPORT.split(","), selection, selectionArgs);
+        }
+    }
+
+    public static void exportData(String resultPath, String databaseName, String[] columns, String selection, String[] selectionArgs) {
+        DatabaseManager databaseManager = DatabaseManager.getInstance();
+        List<String> currentTables;
+        try {
+            databaseManager.useDatabase(databaseName);
+            currentTables = DatabaseManager.getInstance().getCurrentTables(databaseName);
+        } catch (SQLException e) {
+            logger.error("Could not get the tables from database '" + databaseName + "'", e);
+            return;
+        }
+        for (String currentTable : currentTables) {
+            if (currentTable.contains(DatabaseManager.FET_FILTER_RESULT_TABLE_NAME)) {
+                String sample = DatabaseManager.getInstance().getSampleName(currentTable);
+                StringBuilder builder = new StringBuilder(sample);
+                for (String column : columns) {
+                    builder.append("_").append(column);
+                }
+                if (DatabaseManager.DENOVO_MODE_DATABASE_NAME.equals(databaseName)) {
+                    builder.append("_denovo");
+                } else {
+                    builder.append("_dnarna");
+                }
+                logger.info("Export data for : " + builder.toString());
+                builder.append(".txt");
+                File f = new File(resultPath + File.separator + builder.toString());
+                PrintWriter pw;
+                try {
+                    pw = new PrintWriter(new FileWriter(f));
+                } catch (IOException e) {
+                    logger.error("Error open the print writer at: " + f.getAbsolutePath(), e);
+                    return;
+                }
+                ResultSet rs;
+                if (columns.length == 1 && columns[0].equalsIgnoreCase("all")) {
+                    rs = databaseManager.query(currentTable, null, selection, selectionArgs);
+                    List<String> columnNames;
+                    try {
+                        columnNames = databaseManager.getColumnNames(databaseName, currentTable);
+                    } catch (SQLException e) {
+                        logger.error("Could not get the column names from table '" + currentTable + "'", e);
+                        return;
+                    }
+
+                    builder = new StringBuilder();
+                    for (String column : columnNames) {
+                        builder.append(column).append("\t");
+                    }
+                    pw.println(builder.toString().trim());
+
+                    try {
+                        while (rs.next()) {
+                            builder = new StringBuilder();
+                            for (String column : columnNames) {
+                                builder.append(rs.getString(column)).append("\t");
+                            }
+                            pw.println(builder.toString().trim());
+                        }
+                    } catch (SQLException e) {
+                        logger.warn("No results", e);
+                    }
+                } else if (columns.length == 1 && columns[0].equalsIgnoreCase("annotation")) {
+                    pw.println("pos");
+                    rs = databaseManager.query(currentTable, new String[]{"chrom", "pos", "ref", "alt"}, selection, selectionArgs);
+                    try {
+                        while (rs.next()) {
+                            pw.println(rs.getString(1) + "\t" + rs.getInt(2) + "\t" + rs.getInt(2) + "\t" + rs.getString(3) + "\t" + rs.getString(4));
+                        }
+                    } catch (SQLException e) {
+                        logger.warn("No results", e);
+                    }
+                } else {
+                    rs = databaseManager.query(currentTable, columns, selection, selectionArgs);
+                    builder = new StringBuilder();
+                    for (String column : columns) {
+                        builder.append(column).append("\t");
+                    }
+                    pw.println(builder.toString().trim());
+
+                    try {
+                        while (rs.next()) {
+                            builder = new StringBuilder();
+                            for (String column : columns) {
+                                builder.append(rs.getString(column)).append("\t");
+                            }
+                            pw.println(builder.toString().trim());
+                        }
+                    } catch (SQLException e) {
+                        logger.warn("No results", e);
+                    }
+                }
+                pw.flush();
+                pw.close();
+            }
+        }
+    }
+
+    public static void sortFilters(List<Filter> filters, int[] orders) {
+        if (filters.size() != orders.length) {
+            logger.error("The number of the filters did not fit for the number of the order", new IllegalArgumentException());
+            return;
+        }
+        logger.info("Sort the filter by the order list.");
+        for (int i = 0, len = orders.length; i < len; i++) {
+            int index = orders[i] - 1;
+            if (index == i || index == -1) {
+                continue;
+            }
+            int tmp = orders[i];
+            orders[i] = orders[index];
+            orders[index] = tmp;
+
+            Filter leftFilter = filters.get(i);
+            Filter rightFilter = filters.get(index);
+            filters.set(index, leftFilter);
+            filters.set(i, rightFilter);
+        }
+
+        for (int i = orders.length - 1; i >= 0; i--) {
+            if (orders[i] == 0) {
+                filters.remove(i);
+            }
         }
     }
 
@@ -467,130 +626,5 @@ public class REFRunner {
                 "--dbsnp=/home/seq/softWare/RED/dbsnp_138.hg19.vcf \\\n" +
                 "--darned=/home/seq/softWare/RED/hg19.txt \\\n" +
                 "--rscript=/usr/bin/Rscript";
-    }
-
-    public static void exportData(File resultPath, String[] columns, String databaseName) {
-        DatabaseManager databaseManager = DatabaseManager.getInstance();
-        List<String> currentTables;
-        try {
-            databaseManager.useDatabase(databaseName);
-            currentTables = DatabaseManager.getInstance().getCurrentTables(databaseName);
-        } catch (SQLException e) {
-            logger.error("Could not get the tables from database '" + databaseName + "'", e);
-            return;
-        }
-        for (String currentTable : currentTables) {
-            if (currentTable.contains(DatabaseManager.FET_FILTER_RESULT_TABLE_NAME)) {
-                String sample = DatabaseManager.getInstance().getSampleName(currentTable);
-                StringBuilder builder = new StringBuilder(sample);
-                for (String column : columns) {
-                    builder.append("_").append(column);
-                }
-                if (DatabaseManager.DENOVO_MODE_DATABASE_NAME.equals(databaseName)) {
-                    builder.append("_denovo");
-                } else {
-                    builder.append("_dnarna");
-                }
-                logger.info("Export data for : " + builder.toString());
-                builder.append(".txt");
-                File f = new File(resultPath + File.separator + builder.toString());
-                PrintWriter pw;
-                try {
-                    pw = new PrintWriter(new FileWriter(f));
-                } catch (IOException e) {
-                    logger.error("Error open the print writer at: " + f.getAbsolutePath(), e);
-                    return;
-                }
-                ResultSet rs;
-                if (columns.length == 1 && columns[0].equalsIgnoreCase("all")) {
-                    rs = databaseManager.query(currentTable, null, null, null);
-                    List<String> columnNames;
-                    try {
-                        columnNames = databaseManager.getColumnNames(databaseName, currentTable);
-                    } catch (SQLException e) {
-                        logger.error("Could not get the column names from table '" + currentTable + "'", e);
-                        return;
-                    }
-
-                    builder = new StringBuilder();
-                    for (String column : columnNames) {
-                        builder.append(column).append("\t");
-                    }
-                    pw.println(builder.toString().trim());
-
-                    try {
-                        while (rs.next()) {
-                            builder = new StringBuilder();
-                            for (String column : columnNames) {
-                                builder.append(rs.getString(column)).append("\t");
-                            }
-                            pw.println(builder.toString().trim());
-                        }
-                    } catch (SQLException e) {
-                        logger.warn("No results", e);
-                    }
-                } else if (columns.length == 1 && columns[0].equalsIgnoreCase("annotation")) {
-                    pw.println("pos");
-                    rs = databaseManager.query(currentTable, new String[]{"chrom", "pos", "ref", "alt"}, null, null);
-                    try {
-                        while (rs.next()) {
-                            pw.println(rs.getString(1) + "\t" + rs.getInt(2) + "\t" + rs.getInt(2) + "\t" + rs.getString(3) + "\t" + rs.getString(4));
-                        }
-                    } catch (SQLException e) {
-                        logger.warn("No results", e);
-                    }
-                } else {
-                    rs = databaseManager.query(currentTable, columns, null, null);
-                    builder = new StringBuilder();
-                    for (String column : columns) {
-                        builder.append(column).append("\t");
-                    }
-                    pw.println(builder.toString().trim());
-
-                    try {
-                        while (rs.next()) {
-                            builder = new StringBuilder();
-                            for (String column : columns) {
-                                builder.append(rs.getString(column)).append("\t");
-                            }
-                            pw.println(builder.toString().trim());
-                        }
-                    } catch (SQLException e) {
-                        logger.warn("No results", e);
-                    }
-                }
-                pw.flush();
-                pw.close();
-            }
-        }
-    }
-
-
-    public static void sortFilters(List<Filter> filters, int[] orders) {
-        if (filters.size() != orders.length) {
-            logger.error("The number of the filters did not fit for the number of the order", new IllegalArgumentException());
-            return;
-        }
-        logger.info("Sort the filter by the order list.");
-        for (int i = 0, len = orders.length; i < len; i++) {
-            int index = orders[i] - 1;
-            if (index == i || index == -1) {
-                continue;
-            }
-            int tmp = orders[i];
-            orders[i] = orders[index];
-            orders[index] = tmp;
-
-            Filter leftFilter = filters.get(i);
-            Filter rightFilter = filters.get(index);
-            filters.set(index, leftFilter);
-            filters.set(i, rightFilter);
-        }
-
-        for (int i = orders.length - 1; i >= 0; i--) {
-            if (orders[i] == 0) {
-                filters.remove(i);
-            }
-        }
     }
 }
