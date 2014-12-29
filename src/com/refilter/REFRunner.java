@@ -34,6 +34,9 @@ package com.refilter;/*
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.joran.JoranConfigurator;
+import ch.qos.logback.core.joran.spi.JoranException;
 import com.refilter.database.DatabaseManager;
 import com.refilter.dataparser.*;
 import com.refilter.filter.Filter;
@@ -82,6 +85,19 @@ public class REFRunner {
     public static String ORDER = "12345678";
     public static String LEVEL = "";
     private static Logger logger = LoggerFactory.getLogger(REFRunner.class);
+
+    static {
+        LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
+        //        StatusPrinter.print(lc);
+        JoranConfigurator configurator = new JoranConfigurator();
+        configurator.setContext(lc);
+        lc.reset();
+        try {
+            configurator.doConfigure("src/com/refilter/config/LogbackConfig.xml");
+        } catch (JoranException e) {
+            logger.error("Can't find the configuration file.", e);
+        }
+    }
 
     public static void main(String[] args) {
         for (String arg : args) {
