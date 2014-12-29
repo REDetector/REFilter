@@ -607,7 +607,7 @@ public class REFRunner {
                 "\n" +
                 "Example:\n" +
                 "1) In Windows, use '--' patterns.\n" +
-                "java -jar E:\\Workspace\\REFilters\\out\\artifacts\\REFilters\\REFilters_jdk1.6.0_43.jar ^\n" +
+                "java -jar E:\\Workspace\\REFilters\\out\\artifacts\\REFilters\\REFilters.jar ^\n" +
                 "--host=127.0.0.1 ^\n" +
                 "--port=3306 ^\n" +
                 "--user=root ^\n" +
@@ -618,7 +618,7 @@ public class REFRunner {
                 "--rscript=C:\\R\\R-3.1.1\\bin\\Rscript.exe\n" +
                 "\n" +
                 "2) In Windows, use '-' patterns.\n" +
-                "java -jar E:\\Workspace\\REFilters\\out\\artifacts\\REFilters\\REFilters_jdk1.6.0_43.jar ^\n" +
+                "java -jar E:\\Workspace\\REFilters\\out\\artifacts\\REFilters\\REFilters.jar ^\n" +
                 "-H 127.0.0.1 ^\n" +
                 "-p 3306 ^\n" +
                 "-u root ^\n" +
