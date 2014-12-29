@@ -21,7 +21,7 @@
 
 <configuration>
 
-    <property file="src/com/refilter/config/variables.properties"/>
+    <property file="src/com/refilter/config/variables.property"/>
 
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
 
