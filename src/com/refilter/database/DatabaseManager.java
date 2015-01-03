@@ -33,7 +33,7 @@ import java.util.List;
 
 public class DatabaseManager {
     public static final int COMMIT_COUNTS_PER_ONCE = 10000;
-    public static final String FILTER = "com/refilter/filter";
+    public static final String FILTER = "filter";
     public static final String DNA_RNA_MODE_DATABASE_NAME = "DNA_RNA_MODE";
     public static final String DENOVO_MODE_DATABASE_NAME = "DENOVO_MODE";
     public static final String RNA_VCF_RESULT_TABLE_NAME = "rnavcf";
@@ -130,7 +130,9 @@ public class DatabaseManager {
         Statement stmt = con.createStatement();
         ResultSet rs = stmt.executeQuery("select COLUMN_NAME from information_schema.columns where table_name='" + tableName + "'");
         while (rs.next()) {
-            columnNames.add(rs.getString(1));
+            if (!columnNames.contains(rs.getString(1))) {
+                columnNames.add(rs.getString(1));
+            }
         }
         return columnNames;
     }
