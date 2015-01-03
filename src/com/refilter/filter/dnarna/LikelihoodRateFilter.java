@@ -37,11 +37,11 @@ import java.util.List;
  */
 
 
-public class LikelihoodRatioFilter implements Filter {
-    private static final Logger logger = LoggerFactory.getLogger(LikelihoodRatioFilter.class);
+public class LikelihoodRateFilter implements Filter {
+    private static final Logger logger = LoggerFactory.getLogger(LikelihoodRateFilter.class);
     private DatabaseManager databaseManager;
 
-    public LikelihoodRatioFilter(DatabaseManager databaseManager) {
+    public LikelihoodRateFilter(DatabaseManager databaseManager) {
         this.databaseManager = databaseManager;
     }
 
@@ -50,12 +50,12 @@ public class LikelihoodRatioFilter implements Filter {
         if (args == null || args.length == 0) {
             return;
         } else if (args.length != 2) {
-            throw new IllegalArgumentException("Args " + Arrays.asList(args) + " for Likelihood Ratio Test Filter are incomplete, please have a check");
+            throw new IllegalArgumentException("Args " + Arrays.asList(args) + " for Likelihood Rate Test Filter are incomplete, please have a check");
         }
         String dnaVcfTable = args[0];
         double threshold = Double.parseDouble(args[1]);
         TableCreator.createFilterTable(previousTable, currentTable);
-        logger.info("Start performing Likelihood Ratio Test Filter...\t" + Timer.getCurrentTime());
+        logger.info("Start performing Likelihood Rate Test Filter...\t" + Timer.getCurrentTime());
         try {
             ResultSet rs = databaseManager.query("select " + previousTable + ".chrom," + previousTable + ".pos," + previousTable + ".AD," +
                     "" + dnaVcfTable + ".qual from " + previousTable + "," + dnaVcfTable + " WHERE " + previousTable + ".chrom=" + dnaVcfTable + ".chrom AND " +
@@ -95,9 +95,9 @@ public class LikelihoodRatioFilter implements Filter {
             databaseManager.setAutoCommit(true);
 
         } catch (SQLException e) {
-            logger.error("Error execute sql clause in " + LikelihoodRatioFilter.class.getName() + ":performFilter()", e);
+            logger.error("Error execute sql clause in " + LikelihoodRateFilter.class.getName() + ":performFilter()", e);
         }
-        logger.info("End performing Likelihood Ratio Test Filter...\t" + Timer.getCurrentTime());
+        logger.info("End performing Likelihood Rate Test Filter...\t" + Timer.getCurrentTime());
     }
 
     @Override
