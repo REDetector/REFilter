@@ -26,6 +26,7 @@ import com.refilter.database.DatabaseManager;
 import com.refilter.database.TableCreator;
 import com.refilter.datatypes.SiteBean;
 import com.refilter.filter.Filter;
+import com.refilter.utils.NegativeType;
 import com.refilter.utils.Timer;
 import net.sf.snver.pileup.util.math.FisherExact;
 import org.slf4j.Logger;
@@ -48,7 +49,7 @@ public class FisherExactTestFilter implements Filter {
         this.databaseManager = databaseManager;
     }
 
-    private List<PValueInfo> getExpectedInfo(String refTable) {
+    private List<PValueInfo> getExpectedInfo(String refTable, String editingType) {
         List<PValueInfo> valueInfos = new ArrayList<PValueInfo>();
         String darnedTable = DatabaseManager.DARNED_DATABASE_TABLE_NAME;
         try {
@@ -64,10 +65,27 @@ public class FisherExactTestFilter implements Filter {
                 info.altCount = Integer.parseInt(sections[1]);
                 valueInfos.add(info);
             }
+
+            String negativeType = NegativeType.getNegativeStrandEditingType(editingType);
+            char[] editingTypes = editingType.toCharArray();
+            char[] negativeTypes = negativeType.toCharArray();
+            StringBuilder stringBuilder = new StringBuilder("select ");
+            stringBuilder.append(refTable);
+            stringBuilder.append(".* from ");
+            stringBuilder.append(refTable);
+            stringBuilder.append(" INNER JOIN ");
+            stringBuilder.append(darnedTable);
+            stringBuilder.append(" ON ");
+            stringBuilder.append(refTable).append(".chrom=").append(darnedTable).append(".chrom AND ");
+            stringBuilder.append(refTable).append(".pos=").append(darnedTable).append(".coordinate AND ");
+            stringBuilder.append("(").append(darnedTable).append(".inchr='").append(editingTypes[0]).append("' AND ").append(darnedTable).append(".inrna='")
+                    .append(editingTypes[1]).append("' OR ");
+            stringBuilder.append(darnedTable).append(".inchr='").append(negativeTypes[0]).append("' AND ").append(darnedTable).append(".inrna='").append
+                    (negativeTypes[1]).append("')");
+            logger.info(stringBuilder.toString());
             //select refTable.* from refTable INNER JOIN pvalueTable ON refTable.chrom=pvalueTable.chrom and refTable.pos=pvalueTable.coordinate
-            rs = databaseManager.query("select " + refTable + ".* from " + refTable + " INNER JOIN " + darnedTable + " ON " + refTable + ".chrom=" + darnedTable + ".chrom" +
-                    " and " + refTable + ".pos=" + darnedTable + ".coordinate and " + darnedTable + ".inchr='A' and (" + darnedTable + ".inrna='I' or " +
-                    darnedTable + ".inrna='G')");
+            rs = databaseManager.query(stringBuilder.toString());
+            logger.info(stringBuilder.toString());
             while (rs.next()) {
                 for (PValueInfo info : valueInfos) {
                     if (info.getChr().equals(rs.getString(1)) && info.getPos() == rs.getInt(2)) {
@@ -84,9 +102,9 @@ public class FisherExactTestFilter implements Filter {
         }
     }
 
-    private List<PValueInfo> executeFETFilter(String fetResultTable, String refTable) {
+    private List<PValueInfo> executeFETFilter(String previousTable, String fetResultTable, String refAlt) {
         logger.info("Start performing Fisher's Exact Test Filter...\t" + Timer.getCurrentTime());
-        List<PValueInfo> valueInfos = getExpectedInfo(refTable);
+        List<PValueInfo> valueInfos = getExpectedInfo(previousTable, refAlt);
         int knownAlt = 0;
         int knownRef = 0;
         for (PValueInfo info : valueInfos) {
@@ -102,10 +120,10 @@ public class FisherExactTestFilter implements Filter {
         FisherExact fisherExact = new FisherExact(1000);
         DecimalFormat dF = new DecimalFormat("#.###");
         for (PValueInfo pValueInfo : valueInfos) {
-            int alt = pValueInfo.altCount;
-            int ref = pValueInfo.refCount;
-            double pValue = fisherExact.getTwoTailedP(ref, alt, knownRef, knownAlt);
-            double level = (double) alt / (alt + ref);
+            int altCount = pValueInfo.altCount;
+            int refCount = pValueInfo.refCount;
+            double pValue = fisherExact.getTwoTailedP(refCount, altCount, knownRef, knownAlt);
+            double level = (double) altCount / (altCount + refCount);
             pValueInfo.setPValue(pValue);
             pValueInfo.setLevel(level);
             try {
@@ -125,13 +143,14 @@ public class FisherExactTestFilter implements Filter {
     public void performFilter(String previousTable, String currentTable, String[] args) {
         if (args == null || args.length == 0) {
             return;
-        } else if (args.length != 3) {
+        } else if (args.length != 4) {
             logger.error("Args " + Arrays.asList(args) + " for Fisher's Exact Test Filter are incomplete, please have a check");
             throw new IllegalArgumentException("Args " + Arrays.asList(args) + " for Fisher's Exact Test Filter are incomplete, please have a check");
         }
         String rScript = args[0];
         double pvalueThreshold = Double.parseDouble(args[1]);
         double fdrThreshold = Double.parseDouble(args[2]);
+        String editingType = args[3];
         TableCreator.createFisherExactTestTable(previousTable, currentTable);
         logger.info("Start performing False Discovery Rate Filter...\t" + Timer.getCurrentTime());
         RCaller caller = new RCaller();
@@ -141,7 +160,7 @@ public class FisherExactTestFilter implements Filter {
             caller.setRExecutable(rScript);
         }
         RCode code = new RCode();
-        List<PValueInfo> pValueList = executeFETFilter(currentTable, previousTable);
+        List<PValueInfo> pValueList = executeFETFilter(previousTable, currentTable, editingType);
         double[] pValueArray = new double[pValueList.size()];
         for (int i = 0, len = pValueList.size(); i < len; i++) {
             pValueArray[i] = pValueList.get(i).getPvalue();

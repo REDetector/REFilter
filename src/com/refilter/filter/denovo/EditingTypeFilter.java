@@ -22,6 +22,7 @@ package com.refilter.filter.denovo;
 import com.refilter.database.DatabaseManager;
 import com.refilter.database.TableCreator;
 import com.refilter.filter.Filter;
+import com.refilter.utils.NegativeType;
 import com.refilter.utils.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,22 +45,39 @@ public class EditingTypeFilter implements Filter {
     public void performFilter(String previousTable, String currentTable, String[] args) {
         if (args == null || args.length == 0) {
             return;
-        } else if (args.length != 2) {
+        } else if (args.length != 1) {
             throw new IllegalArgumentException("Args " + Arrays.asList(args) + " for Editing Type Filter are incomplete, please have a check");
         }
-        TableCreator.createFilterTable(previousTable,currentTable);
+        TableCreator.createFilterTable(previousTable, currentTable);
         logger.info("Start executing Editing Type Filter..." + Timer.getCurrentTime());
-        String ref = args[0];
-        String alt = args[1];
+        String refAlt = args[0];
+        String refAlt2 = NegativeType.getNegativeStrandEditingType(refAlt);
+
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("insert into ");
         stringBuilder.append(currentTable);
         stringBuilder.append(" select * from ");
         stringBuilder.append(previousTable);
         stringBuilder.append(" WHERE REF='");
-        stringBuilder.append(ref);
+        stringBuilder.append(refAlt.substring(0, 1));
         stringBuilder.append("' AND ALT='");
-        stringBuilder.append(alt);
+        stringBuilder.append(refAlt.substring(1));
+        stringBuilder.append("' AND GT!='0/0'");
+        try {
+            databaseManager.insertClause(stringBuilder.toString());
+        } catch (SQLException e) {
+            logger.error("There is a syntax error for SQL clause: " + stringBuilder.toString(), e);
+        }
+
+        stringBuilder = new StringBuilder();
+        stringBuilder.append("insert into ");
+        stringBuilder.append(currentTable);
+        stringBuilder.append(" select * from ");
+        stringBuilder.append(previousTable);
+        stringBuilder.append(" WHERE REF='");
+        stringBuilder.append(refAlt2.substring(0, 1));
+        stringBuilder.append("' AND ALT='");
+        stringBuilder.append(refAlt2.substring(1));
         stringBuilder.append("' AND GT!='0/0'");
         try {
             databaseManager.insertClause(stringBuilder.toString());

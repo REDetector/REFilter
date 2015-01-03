@@ -21,6 +21,7 @@ package com.refilter.filter.dnarna;
 import com.refilter.database.DatabaseManager;
 import com.refilter.database.TableCreator;
 import com.refilter.filter.Filter;
+import com.refilter.utils.NegativeType;
 import com.refilter.utils.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,16 +45,18 @@ public class DNARNAFilter implements Filter {
     public void performFilter(String previousTable, String currentTable, String[] args) {
         if (args == null || args.length == 0) {
             return;
-        } else if (args.length != 1) {
+        } else if (args.length != 2) {
             throw new IllegalArgumentException("Args " + Arrays.asList(args) + " for DNA-RNA Filter are incomplete, please have a check");
         }
         TableCreator.createFilterTable(previousTable, currentTable);
         logger.info("Start performing DNA-RNA Filter...\t" + Timer.getCurrentTime());
         String dnaVcfTable = args[0];
+        String editingType = args[1];
+        String negativeType = NegativeType.getNegativeStrandEditingType(editingType);
         try {
-            databaseManager.executeSQL("insert into " + currentTable + " select * from " + previousTable + " where " +
-                    "exists (select chrom from " + dnaVcfTable + " where (" + dnaVcfTable + ".chrom=" + previousTable +
-                    ".chrom and " + dnaVcfTable + ".pos=" + previousTable + ".pos))");
+            databaseManager.executeSQL("insert into " + currentTable + " select * from " + previousTable + " where exists (select chrom from " + dnaVcfTable
+                    + " where (" + dnaVcfTable + ".chrom=" + previousTable + ".chrom and " + dnaVcfTable + ".pos=" + previousTable + ".pos and (" +
+                    dnaVcfTable + ".ref='" + editingType.charAt(0) + "' or  " + dnaVcfTable + ".ref='" + negativeType.charAt(0) + "')))");
         } catch (SQLException e) {
             logger.error("Error execute sql clause in " + DNARNAFilter.class.getName() + ":performFilter()", e);
         }
