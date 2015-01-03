@@ -14,3 +14,6 @@ src/META-INF
 
 #Filter test directory.
 test/
+
+#Filter all jar package.
+*.jar
