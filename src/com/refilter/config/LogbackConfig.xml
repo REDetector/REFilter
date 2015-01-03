@@ -21,8 +21,6 @@
 
 <configuration>
 
-    <property file="src/com/refilter/config/variables.property"/>
-
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
 
         <Target>System.out</Target>
@@ -57,7 +55,7 @@
 
     <appender name="FILEINFO" class="ch.qos.logback.core.FileAppender">
 
-        <file>${infoPath}</file>
+        <file>./REFilter_log/Information.log</file>
 
         <filter class="ch.qos.logback.classic.filter.LevelFilter">
             <level>ERROR</level>
@@ -73,7 +71,7 @@
 
     <appender name="FILEERROR" class="ch.qos.logback.core.FileAppender">
 
-        <file>${errorPath}</file>
+        <file>./REFilter_log/Error.log</file>
 
         <filter class="ch.qos.logback.classic.filter.LevelFilter">
             <level>ERROR</level>
