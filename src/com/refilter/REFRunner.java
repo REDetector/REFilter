@@ -429,6 +429,7 @@ public class REFRunner {
                     throw new IllegalArgumentException();
                 }
                 filters.get(i).performFilter(previousTable, currentTable, arguments);
+                DatabaseManager.getInstance().distinctTable(currentTable);
             }
             endTime = Timer.getCurrentTime();
             logger.info("End performing filters :\t" + endTime);
@@ -459,11 +460,12 @@ public class REFRunner {
         for (String currentTable : currentTables) {
             if (currentTable.contains(DatabaseManager.FET_FILTER_RESULT_TABLE_NAME)) {
                 String sample = DatabaseManager.getInstance().getSampleName(currentTable);
+                logger.info(currentTable + "\t" + sample);
                 StringBuilder builder = new StringBuilder(sample);
                 for (String column : columns) {
                     builder.append("_").append(column);
                 }
-                if (DatabaseManager.DENOVO_MODE_DATABASE_NAME.equals(databaseName)) {
+                if (MODE.equalsIgnoreCase("denovo")) {
                     builder.append("_denovo");
                 } else {
                     builder.append("_dnarna");
