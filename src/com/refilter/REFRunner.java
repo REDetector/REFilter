@@ -92,7 +92,7 @@ public class REFRunner {
         configurator.setContext(lc);
         lc.reset();
         try {
-            configurator.doConfigure(ClassLoader.getSystemResource("com/refilter/config/logbackconfig.xml"));
+            configurator.doConfigure(ClassLoader.getSystemResource("com/refilter/config/LogbackConfig.xml"));
         } catch (JoranException e) {
             e.printStackTrace();
         }
