@@ -42,7 +42,7 @@ import com.refilter.dataparser.*;
 import com.refilter.filter.Filter;
 import com.refilter.filter.denovo.*;
 import com.refilter.filter.dnarna.DNARNAFilter;
-import com.refilter.filter.dnarna.LikelihoodRatioFilter;
+import com.refilter.filter.dnarna.LikelihoodRateFilter;
 import com.refilter.utils.DatabasePreferences;
 import com.refilter.utils.FileUtils;
 import com.refilter.utils.Timer;
@@ -88,14 +88,13 @@ public class REFRunner {
 
     static {
         LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
-        //        StatusPrinter.print(lc);
         JoranConfigurator configurator = new JoranConfigurator();
         configurator.setContext(lc);
         lc.reset();
         try {
-            configurator.doConfigure("src/com/refilter/config/LogbackConfig.xml");
+            configurator.doConfigure(ClassLoader.getSystemResource("com/refilter/config/logbackconfig.xml"));
         } catch (JoranException e) {
-            logger.error("Can't find the configuration file.", e);
+            e.printStackTrace();
         }
     }
 
@@ -361,7 +360,7 @@ public class REFRunner {
         filters.add(new RepeatRegionsFilter(manager));
         filters.add(new KnownSNPFilter(manager));
         if (!denovo) {
-            filters.add(new LikelihoodRatioFilter(manager));
+            filters.add(new LikelihoodRateFilter(manager));
         }
         filters.add(new FisherExactTestFilter(manager));
 
@@ -410,11 +409,11 @@ public class REFRunner {
                 }
                 String[] arguments;
                 if (currentFilterName.equals(DatabaseManager.EDITING_TYPE_FILTER_RESULT_TABLE_NAME)) {
-                    arguments = new String[]{"A", "G"};
+                    arguments = new String[]{"AG"};
                 } else if (currentFilterName.equals(DatabaseManager.QC_FILTER_RESULT_TABLE_NAME)) {
                     arguments = new String[]{"20", "6"};
                 } else if (currentFilterName.equals(DatabaseManager.DNA_RNA_FILTER_RESULT_TABLE_NAME)) {
-                    arguments = new String[]{dnavcfTableName};
+                    arguments = new String[]{dnavcfTableName, "AG"};
                 } else if (currentFilterName.equals(DatabaseManager.SPLICE_JUNCTION_FILTER_RESULT_TABLE_NAME)) {
                     arguments = new String[]{"2"};
                 } else if (currentFilterName.equals(DatabaseManager.REPEAT_FILTER_RESULT_TABLE_NAME)) {
@@ -424,7 +423,7 @@ public class REFRunner {
                 } else if (currentFilterName.equals(DatabaseManager.LLR_FILTER_RESULT_TABLE_NAME)) {
                     arguments = new String[]{dnavcfTableName, "4"};
                 } else if (currentFilterName.equals(DatabaseManager.FET_FILTER_RESULT_TABLE_NAME)) {
-                    arguments = new String[]{RSCRIPT, "0.05", "0.05"};
+                    arguments = new String[]{RSCRIPT, "0.05", "0.05", "AG"};
                 } else {
                     logger.error("Unknown current table : {}", currentFilterName);
                     throw new IllegalArgumentException();
