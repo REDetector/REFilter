@@ -77,13 +77,15 @@ public class DARNEDParser {
                     for (int i = 0; i < 5; i++) {
                         if (i == 0) {
                             stringBuilder.append("'chr").append(sections[i]).append("',");
+                        } else if (i == 4) {
+                            stringBuilder.append("'").append(sections[i].replace("I", "G")).append("'");
                         } else if (i == 1) {
                             stringBuilder.append(sections[i]).append(",");
                         } else {
                             stringBuilder.append("'").append(sections[i]).append("',");
                         }
                     }
-                    stringBuilder.deleteCharAt(stringBuilder.length() - 1).append(")");
+                    stringBuilder.append(")");
 
                     databaseManager.executeSQL(stringBuilder.toString());
                     if (++count % DatabaseManager.COMMIT_COUNTS_PER_ONCE == 0)
