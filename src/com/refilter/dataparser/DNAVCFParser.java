@@ -104,9 +104,7 @@ public class DNAVCFParser {
 
                 for (int i = formatColumnIndex + 1; i < columnLength; i++) {
 
-                    if (!sections[altColumn].equals(".") || sections[i].contains(".") || !sections[refColumn].toUpperCase().equals("A")
-                            || !sections[filterColumn].toUpperCase().equals("PASS")
-                            ) {
+                    if (!sections[altColumn].equals(".") || sections[i].contains(".") || !sections[filterColumn].toUpperCase().equals("PASS")) {
                         continue;
                     }
 
