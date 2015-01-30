@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!--
-  ~ REFilter: RNA Editing Filter
+  ~ REFilters: RNA Editing Filters
   ~     Copyright (C) <2014>  <Xing Li>
   ~
-  ~     REFilter is free software: you can redistribute it and/or modify
+  ~     RED is free software: you can redistribute it and/or modify
   ~     it under the terms of the GNU General Public License as published by
   ~     the Free Software Foundation, either version 3 of the License, or
   ~     (at your option) any later version.
   ~
-  ~     REFilter is distributed in the hope that it will be useful,
+  ~     RED is distributed in the hope that it will be useful,
   ~     but WITHOUT ANY WARRANTY; without even the implied warranty of
   ~     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   ~     GNU General Public License for more details.
@@ -55,7 +55,7 @@
 
     <appender name="FILEINFO" class="ch.qos.logback.core.FileAppender">
 
-        <file>./REFilter_log/Information.log</file>
+        <file>./refilter_logs/Information.log</file>
 
         <filter class="ch.qos.logback.classic.filter.LevelFilter">
             <level>ERROR</level>
@@ -71,7 +71,7 @@
 
     <appender name="FILEERROR" class="ch.qos.logback.core.FileAppender">
 
-        <file>./REFilter_log/Error.log</file>
+        <file>./refilter_logs/Error.log</file>
 
         <filter class="ch.qos.logback.classic.filter.LevelFilter">
             <level>ERROR</level>

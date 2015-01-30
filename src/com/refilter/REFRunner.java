@@ -1,13 +1,13 @@
 /*
- * REFilter: RNA Editing Filter
+ * REFilters: RNA Editing Filters
  *     Copyright (C) <2014>  <Xing Li>
  *
- *     REFilter is free software: you can redistribute it and/or modify
+ *     RED is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
  *     the Free Software Foundation, either version 3 of the License, or
  *     (at your option) any later version.
  *
- *     REFilter is distributed in the hope that it will be useful,
+ *     RED is distributed in the hope that it will be useful,
  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *     GNU General Public License for more details.
@@ -16,27 +16,12 @@
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.refilter;/*
- * REFilter: RNA Editing Filter
- *     Copyright (C) <2014>  <Xing Li>
- *
- *     REFilter is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
- *
- *     REFilter is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
- *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+package com.refilter;
 
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
 import ch.qos.logback.core.joran.spi.JoranException;
+import com.refilter.database.DataExporter;
 import com.refilter.database.DatabaseManager;
 import com.refilter.dataparser.*;
 import com.refilter.filter.Filter;
@@ -50,10 +35,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileFilter;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -74,16 +58,19 @@ public class REFRunner {
     public static String MODE = "dnarna";
     public static String INPUT = "";
     public static String OUTPUT = "";
-    public static String EXPORT = "all";
+    public static String EXPORT = "";
     public static String RNAVCF = "";
     public static String DNAVCF = "";
     public static String DARNED = "";
     public static String SPLICE = "";
+    public static String REFSEQ = "";
     public static String REPEAT = "";
     public static String DBSNP = "";
     public static String RSCRIPT = "/usr/bin/RScript";
     public static String ORDER = "12345678";
     public static String LEVEL = "";
+    public static String QUERY = "";
+    public static String EXTRACT = "";
     private static Logger logger = LoggerFactory.getLogger(REFRunner.class);
 
     static {
@@ -165,6 +152,12 @@ public class REFRunner {
                 case 'l':
                     LEVEL = value;
                     break;
+                case 'q':
+                    QUERY = value;
+                    break;
+                case 'E':
+                    EXTRACT = value;
+                    break;
                 default:
                     logger.error("Unknown the argument '-" + key + "', please have a check.", new IllegalArgumentException());
                     return;
@@ -192,7 +185,7 @@ public class REFRunner {
                 OUTPUT = value;
             } else if (key.equalsIgnoreCase("export")) {
                 EXPORT = value;
-            } else if (key.equalsIgnoreCase("r")) {
+            } else if (key.equalsIgnoreCase("r") || key.equalsIgnoreCase("rscript")) {
                 RSCRIPT = value;
             } else if (key.equalsIgnoreCase("rnavcf")) {
                 RNAVCF = value;
@@ -210,6 +203,12 @@ public class REFRunner {
                 ORDER = value;
             } else if (key.equalsIgnoreCase("level")) {
                 LEVEL = value;
+            } else if (key.equalsIgnoreCase("query")) {
+                QUERY = value;
+            } else if (key.equalsIgnoreCase("extract")) {
+                EXTRACT = value;
+            } else if (key.equalsIgnoreCase("refseq")) {
+                REFSEQ = value;
             } else {
                 logger.error("Unknown the argument '--" + key + "', please have a check.", new IllegalArgumentException());
                 return;
@@ -246,7 +245,7 @@ public class REFRunner {
         logger.info("Connect database successfully.");
         manager.setAutoCommit(true);
 
-        logger.info("Set up the output directory.");
+        logger.info("Set up the output directory at:" + OUTPUT);
         File root = new File(OUTPUT);
         String rootPath = root.getAbsolutePath();
         if (!FileUtils.createDirectory(rootPath)) {
@@ -273,20 +272,82 @@ public class REFRunner {
         manager.createDatabase(DATABASE);
         manager.useDatabase(DATABASE);
 
-        String resultPath = rootPath + File.separator + "results";
+        String resultPath = rootPath + File.separator + "refilter_results";
         if (!FileUtils.createDirectory(resultPath)) {
             logger.error("Result path '{}' can not be created. Make sure you have the file permission.", resultPath);
             return;
         }
 
         if (EXPORT.length() != 0 && (RNAVCF.length() == 0 || (!denovo && DNAVCF.length() == 0))) {
+            logger.info("Start exporting all data from database '" + DATABASE + "'");
             String selection = null;
             String[] selectionArgs = null;
             if (LEVEL.length() != 0) {
                 selection = "level>=? AND level<?";
                 selectionArgs = LEVEL.split(",");
             }
-            exportData(resultPath, DATABASE, EXPORT.split(","), selection, selectionArgs);
+            if (QUERY.length() != 0) {
+                StringBuilder stringBuilder = new StringBuilder();
+                String[] params = QUERY.split(",");
+                stringBuilder.append("chrom=? and pos=?");
+                for (int i = 0, len = params.length / 2; i < len - 1; i++) {
+                    stringBuilder.append(" or chrom=? and pos=?");
+                }
+                selection = stringBuilder.toString();
+                selectionArgs = params;
+            }
+            DataExporter exporter = new DataExporter();
+            exporter.exportData(resultPath, DATABASE, MODE, EXPORT.split(","), selection, selectionArgs);
+            logger.info("Export complete!");
+            return;
+        }
+
+        if (EXTRACT.length() != 0 && (RNAVCF.length() == 0 || (!denovo && DNAVCF.length() == 0))) {
+            logger.info("Start extracting data from annotation file.");
+            File extractFile = new File(EXTRACT);
+            if (extractFile.exists() && extractFile.isDirectory()) {
+                File[] extractFiles = extractFile.listFiles(new FileFilter() {
+                    @Override
+                    public boolean accept(File pathname) {
+                        return pathname.getName().toLowerCase().endsWith(".txt");
+                    }
+                });
+                if (extractFiles != null) {
+                    for (File file : extractFiles) {
+                        DataExporter dataExporter = new DataExporter();
+                        try {
+                            String fileName = file.getName();
+                            dataExporter.exportStrandResults(file, new File(resultPath + "/" + fileName.substring(0, fileName.lastIndexOf(".")) + "_strand.txt"));
+                        } catch (IOException e) {
+                            logger.error("Error getting I/O stream", e);
+                            return;
+                        } catch (SQLException e) {
+                            logger.error("Error executing the SQL clause", e);
+                            return;
+                        }
+                    }
+                } else {
+                    logger.warn("There are no files in this directory, please have a check and run again.");
+                    return;
+                }
+            } else if (EXTRACT.equalsIgnoreCase("dna")) {
+                DataExporter dataExporter = new DataExporter();
+                try {
+                    List<String> tableNames = DatabaseManager.getInstance().getCurrentTables(DATABASE);
+                    for (String tableName : tableNames) {
+                        if (tableName.endsWith(DatabaseManager.DNA_VCF_RESULT_TABLE_NAME)) {
+                            dataExporter.exportDNAResults(tableName, QUERY.split(","), new File(resultPath + "/dna_info_" + tableName + ".txt"));
+                        }
+                    }
+                } catch (SQLException e) {
+                    logger.error("Error executing the SQL clause", e);
+                    return;
+                } catch (FileNotFoundException e) {
+                    logger.error("Error getting I/O stream", e);
+                    return;
+                }
+            }
+            logger.info("Extract complete!");
             return;
         }
 
@@ -340,6 +401,10 @@ public class REFRunner {
         if (DARNED.length() != 0) {
             new DARNEDParser(manager).loadDarnedTable(DARNED);
         }
+        if (REFSEQ.length() != 0) {
+            new RefGeneParser(manager).loadRefSeqGeneTable(REFSEQ);
+        }
+
 
         String endTime = Timer.getCurrentTime();
         logger.info("End importing data :\t" + endTime);
@@ -443,106 +508,11 @@ public class REFRunner {
                 selection = "level>=? AND level<?";
                 selectionArgs = LEVEL.split(",");
             }
-            exportData(resultPath, DATABASE, EXPORT.split(","), selection, selectionArgs);
+            DataExporter exporter = new DataExporter();
+            exporter.exportData(resultPath, DATABASE, MODE, EXPORT.split(","), selection, selectionArgs);
         }
     }
 
-    public static void exportData(String resultPath, String databaseName, String[] columns, String selection, String[] selectionArgs) {
-        DatabaseManager databaseManager = DatabaseManager.getInstance();
-        List<String> currentTables;
-        try {
-            databaseManager.useDatabase(databaseName);
-            currentTables = DatabaseManager.getInstance().getCurrentTables(databaseName);
-        } catch (SQLException e) {
-            logger.error("Could not get the tables from database '" + databaseName + "'", e);
-            return;
-        }
-        for (String currentTable : currentTables) {
-            if (currentTable.contains(DatabaseManager.FET_FILTER_RESULT_TABLE_NAME)) {
-                String sample = DatabaseManager.getInstance().getSampleName(currentTable);
-                logger.info(currentTable + "\t" + sample);
-                StringBuilder builder = new StringBuilder(sample);
-                for (String column : columns) {
-                    builder.append("_").append(column);
-                }
-                if (MODE.equalsIgnoreCase("denovo")) {
-                    builder.append("_denovo");
-                } else {
-                    builder.append("_dnarna");
-                }
-                logger.info("Export data for : " + builder.toString());
-                builder.append(".txt");
-                File f = new File(resultPath + File.separator + builder.toString());
-                PrintWriter pw;
-                try {
-                    pw = new PrintWriter(new FileWriter(f));
-                } catch (IOException e) {
-                    logger.error("Error open the print writer at: " + f.getAbsolutePath(), e);
-                    return;
-                }
-                ResultSet rs;
-                if (columns.length == 1 && columns[0].equalsIgnoreCase("all")) {
-                    rs = databaseManager.query(currentTable, null, selection, selectionArgs);
-                    List<String> columnNames;
-                    try {
-                        columnNames = databaseManager.getColumnNames(databaseName, currentTable);
-                    } catch (SQLException e) {
-                        logger.error("Could not get the column names from table '" + currentTable + "'", e);
-                        return;
-                    }
-
-                    builder = new StringBuilder();
-                    for (String column : columnNames) {
-                        builder.append(column).append("\t");
-                    }
-                    pw.println(builder.toString().trim());
-
-                    try {
-                        while (rs.next()) {
-                            builder = new StringBuilder();
-                            for (String column : columnNames) {
-                                builder.append(rs.getString(column)).append("\t");
-                            }
-                            pw.println(builder.toString().trim());
-                        }
-                    } catch (SQLException e) {
-                        logger.warn("No results", e);
-                    }
-                } else if (columns.length == 1 && columns[0].equalsIgnoreCase("annotation")) {
-                    pw.println("pos");
-                    rs = databaseManager.query(currentTable, new String[]{"chrom", "pos", "ref", "alt"}, selection, selectionArgs);
-                    try {
-                        while (rs.next()) {
-                            pw.println(rs.getString(1) + "\t" + rs.getInt(2) + "\t" + rs.getInt(2) + "\t" + rs.getString(3) + "\t" + rs.getString(4));
-                        }
-                    } catch (SQLException e) {
-                        logger.warn("No results", e);
-                    }
-                } else {
-                    rs = databaseManager.query(currentTable, columns, selection, selectionArgs);
-                    builder = new StringBuilder();
-                    for (String column : columns) {
-                        builder.append(column).append("\t");
-                    }
-                    pw.println(builder.toString().trim());
-
-                    try {
-                        while (rs.next()) {
-                            builder = new StringBuilder();
-                            for (String column : columns) {
-                                builder.append(rs.getString(column)).append("\t");
-                            }
-                            pw.println(builder.toString().trim());
-                        }
-                    } catch (SQLException e) {
-                        logger.warn("No results", e);
-                    }
-                }
-                pw.flush();
-                pw.close();
-            }
-        }
-    }
 
     public static void sortFilters(List<Filter> filters, int[] orders) {
         if (filters.size() != orders.length) {

@@ -1,13 +1,13 @@
 /*
- * REFilter: RNA Editing Filter
+ * REFilters: RNA Editing Filters
  *     Copyright (C) <2014>  <Xing Li>
  *
- *     REFilter is free software: you can redistribute it and/or modify
+ *     RED is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
  *     the Free Software Foundation, either version 3 of the License, or
  *     (at your option) any later version.
  *
- *     REFilter is distributed in the hope that it will be useful,
+ *     RED is distributed in the hope that it will be useful,
  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *     GNU General Public License for more details.
@@ -50,6 +50,7 @@ public class DatabaseManager {
     public static final String DARNED_DATABASE_TABLE_NAME = "darned_database";
     public static final String REPEAT_MASKER_TABLE_NAME = "repeat_masker";
     public static final String DBSNP_DATABASE_TABLE_NAME = "dbsnp_database";
+    public static final String REFSEQ_GENE_TABLE_NAME = "reference_gene";
     private static final Logger logger = LoggerFactory.getLogger(DatabaseManager.class);
     private static final DatabaseManager DATABASE_MANAGER = new DatabaseManager();
     private static Statement stmt;
@@ -214,7 +215,7 @@ public class DatabaseManager {
             stmt.executeUpdate("use " + databaseName);
             stmt.close();
         } catch (SQLException e) {
-            logger.warn("Can not use the database: " + databaseName);
+            logger.error("Can not use the database: " + databaseName, e);
         }
     }
 
