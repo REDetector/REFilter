@@ -162,7 +162,7 @@ public class DataExporter {
         String line;
         while ((line = br.readLine()) != null) {
             String[] sections = line.split("\\t");
-            strandSites.add(new StrandSite("chr" + sections[4], sections[5], sections[10], sections[11]));
+            strandSites.add(new StrandSite(sections[0], "chr" + sections[4], sections[5], sections[10], sections[11]));
         }
         br.close();
         for (StrandSite strandSite : strandSites) {
@@ -177,7 +177,32 @@ public class DataExporter {
         }
         p.flush();
         p.close();
+    }
 
+    public void exportStrandResultsByName2(File inputFile, File outputFile) throws IOException, SQLException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(inputFile)));
+        List<StrandSite> strandSites = new ArrayList<StrandSite>();
+        PrintWriter p = new PrintWriter(outputFile);
+        br.readLine();
+        br.readLine();
+        String line;
+        while ((line = br.readLine()) != null) {
+            String[] sections = line.split("\\t");
+            strandSites.add(new StrandSite(sections[0], "chr" + sections[4], sections[5], sections[10], sections[11]));
+        }
+        br.close();
+        for (StrandSite strandSite : strandSites) {
+            ResultSet rs = databaseManager.query(DatabaseManager.REFSEQ_GENE_TABLE_NAME, new String[]{"strand"}, "name2=?", new
+                    String[]{strandSite.name});
+            if (rs.next()) {
+                strandSite.setStrand(rs.getString(1));
+            } else {
+                strandSite.setStrand("N/A");
+            }
+            p.println(strandSite.toString());
+        }
+        p.flush();
+        p.close();
     }
 
     public void exportDNAResults(String dnaVCF, String[] chrPoses, File outputFile) throws FileNotFoundException, SQLException {
@@ -201,8 +226,10 @@ public class DataExporter {
         private String ref;
         private String alt;
         private String strand;
+        private String name;
 
-        public StrandSite(String chr, String pos, String ref, String alt) {
+        public StrandSite(String name, String chr, String pos, String ref, String alt) {
+            this.name = name;
             this.chr = chr;
             this.pos = pos;
             this.ref = ref;
@@ -215,7 +242,7 @@ public class DataExporter {
 
         @Override
         public String toString() {
-            return chr.substring(3) + "\t" + pos + "\t" + ref + "\t" + alt + "\t" + strand;
+            return chr.substring(3) + "\t" + pos + "\t" + ref + "\t" + alt + "\t" + strand + "\t" + name;
         }
     }
 }
