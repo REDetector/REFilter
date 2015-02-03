@@ -317,7 +317,7 @@ public class REFRunner {
                         DataExporter dataExporter = new DataExporter();
                         try {
                             String fileName = file.getName();
-                            dataExporter.exportStrandResults(file, new File(resultPath + "/" + fileName.substring(0, fileName.lastIndexOf(".")) + "_strand.txt"));
+                            dataExporter.exportStrandResultsByName2(file, new File(resultPath + "/" + fileName.substring(0, fileName.lastIndexOf(".")) + "_strand.txt"));
                         } catch (IOException e) {
                             logger.error("Error getting I/O stream", e);
                             return;
