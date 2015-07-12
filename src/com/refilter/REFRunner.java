@@ -13,9 +13,20 @@
 
 package com.refilter;
 
+import java.io.File;
+import java.io.FileFilter;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.*;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
 import ch.qos.logback.core.joran.spi.JoranException;
+
 import com.refilter.database.DataExporter;
 import com.refilter.database.DatabaseManager;
 import com.refilter.dataparser.*;
@@ -26,15 +37,6 @@ import com.refilter.filter.dnarna.LikelihoodRateFilter;
 import com.refilter.utils.DatabasePreferences;
 import com.refilter.utils.FileUtils;
 import com.refilter.utils.Timer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.FileFilter;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.*;
 
 /**
  * Created by Xing Li on 2014/11/20.
@@ -242,8 +244,8 @@ public class REFRunner {
         if (!manager.connectDatabase(HOST, PORT, USER, PWD)) {
             logger
                 .error(
-                        "Sorry, fail to connect to the database. You may input one of the wrong database host, port, user name or password.",
-                        new SQLException());
+                    "Sorry, fail to connect to the database. You may input one of the wrong database host, port, user name or password.",
+                    new SQLException());
             return;
         }
         logger.info("Connect database successfully.");

@@ -1,37 +1,32 @@
 /*
- * REFilters: RNA Editing Filters
- *     Copyright (C) <2014>  <Xing Li>
- *
- *     RED is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
- *
- *     RED is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
- *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * REFilters: RNA Editing Filters Copyright (C) <2014> <Xing Li>
+ * 
+ * RED is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ * 
+ * RED is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 package com.refilter.filter.denovo;
-
-
-import com.refilter.database.DatabaseManager;
-import com.refilter.database.TableCreator;
-import com.refilter.datatypes.SiteBean;
-import com.refilter.filter.Filter;
-import com.refilter.utils.Timer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.refilter.database.DatabaseManager;
+import com.refilter.database.TableCreator;
+import com.refilter.datatypes.SiteBean;
+import com.refilter.filter.Filter;
+import com.refilter.utils.Timer;
 
 /**
  * Basic process for QC filter means we set threshold on quality and depth
@@ -49,7 +44,8 @@ public class QualityControlFilter implements Filter {
         if (args == null || args.length == 0) {
             return;
         } else if (args.length != 2) {
-            throw new IllegalArgumentException("Args " + Arrays.asList(args) + " for Quality Control Filter are incomplete, please have a check");
+            throw new IllegalArgumentException("Args " + Arrays.asList(args)
+                + " for Quality Control Filter are incomplete, please have a check");
         }
         double quality = Double.parseDouble(args[0]);
         int depth = Integer.parseInt(args[1]);
@@ -57,7 +53,7 @@ public class QualityControlFilter implements Filter {
         logger.info("Start performing Quality Control Filter...\t" + Timer.getCurrentTime());
         try {
             int count = 0;
-            ResultSet rs = databaseManager.query(previousTable, new String[]{"chrom", "pos", "AD"}, null, null);
+            ResultSet rs = databaseManager.query(previousTable, new String[] { "chrom", "pos", "AD" }, null, null);
             List<SiteBean> siteBeans = new ArrayList<SiteBean>();
             while (rs.next()) {
                 if (rs.getString(3) != null) {
@@ -72,8 +68,9 @@ public class QualityControlFilter implements Filter {
                 int ref_n = Integer.parseInt(sections[0]);
                 int alt_n = Integer.parseInt(sections[1]);
                 if (ref_n + alt_n >= depth) {
-                    databaseManager.executeSQL("insert into " + currentTable + " (select * from " + previousTable + " where filter='PASS' and pos=" + siteBean
-                            .getPos() + " and qual >=" + quality + " and chrom='" + siteBean.getChr() + "')");
+                    databaseManager.executeSQL("insert into " + currentTable + " (select * from " + previousTable
+                        + " where filter='PASS' and pos=" + siteBean.getPos() + " and qual >=" + quality
+                        + " and chrom='" + siteBean.getChr() + "')");
                     if (++count % DatabaseManager.COMMIT_COUNTS_PER_ONCE == 0)
                         databaseManager.commit();
                 }

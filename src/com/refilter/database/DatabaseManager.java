@@ -17,14 +17,15 @@ package com.refilter.database;
  * Linked to target database
  */
 
-import com.refilter.utils.DatabasePreferences;
-import com.refilter.utils.RandomStringGenerator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.refilter.utils.DatabasePreferences;
+import com.refilter.utils.RandomStringGenerator;
 
 public class DatabaseManager {
     public static final int COMMIT_COUNTS_PER_ONCE = 10000;

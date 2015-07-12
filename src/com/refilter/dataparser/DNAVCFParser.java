@@ -13,18 +13,19 @@
 
 package com.refilter.dataparser;
 
-import com.refilter.database.DatabaseManager;
-import com.refilter.utils.Indexer;
-import com.refilter.utils.Timer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.sql.SQLException;
 import java.util.Arrays;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.refilter.database.DatabaseManager;
+import com.refilter.utils.Indexer;
+import com.refilter.utils.Timer;
 
 /**
  * Created by Administrator on 2014/9/29.
