@@ -1,19 +1,14 @@
 /*
- * REFilters: RNA Editing Filters
- *     Copyright (C) <2014>  <Xing Li>
- *
- *     RED is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
- *
- *     RED is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
- *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * REFilters: RNA Editing Filters Copyright (C) <2014> <Xing Li>
+ * 
+ * RED is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ * 
+ * RED is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 package com.refilter.database;
@@ -129,7 +124,8 @@ public class DatabaseManager {
         List<String> columnNames = new ArrayList<String>();
         useDatabase(database);
         Statement stmt = con.createStatement();
-        ResultSet rs = stmt.executeQuery("select COLUMN_NAME from information_schema.columns where table_name='" + tableName + "'");
+        ResultSet rs =
+            stmt.executeQuery("select COLUMN_NAME from information_schema.columns where table_name='" + tableName + "'");
         while (rs.next()) {
             if (!columnNames.contains(rs.getString(1))) {
                 columnNames.add(rs.getString(1));
@@ -142,7 +138,7 @@ public class DatabaseManager {
         List<String> tableLists = new ArrayList<String>();
         useDatabase(database);
         DatabaseMetaData databaseMetaData = con.getMetaData();
-        ResultSet rs = databaseMetaData.getTables(database, null, null, new String[]{"TABLE"});
+        ResultSet rs = databaseMetaData.getTables(database, null, null, new String[] { "TABLE" });
         while (rs.next()) {
             // get table name
             tableLists.add(rs.getString(3));
@@ -171,6 +167,11 @@ public class DatabaseManager {
             // Prevent from deleting BJ22N sample, but actually we want to delete BJ22 sample.
             Statement stmt = con.createStatement();
             for (String table : tableLists) {
+                // We won't drop your own data set in the database.
+                if (table.equals(sampleName + "_" + DatabaseManager.DNA_VCF_RESULT_TABLE_NAME)
+                    || table.equals(sampleName + "_" + DatabaseManager.RNA_VCF_RESULT_TABLE_NAME)) {
+                    continue;
+                }
                 if (table.startsWith(sampleName + "_")) {
                     stmt.executeUpdate("drop table if exists " + table);
                 }

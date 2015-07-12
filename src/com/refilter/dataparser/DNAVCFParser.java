@@ -1,23 +1,17 @@
 /*
- * REFilters: RNA Editing Filters
- *     Copyright (C) <2014>  <Xing Li>
- *
- *     RED is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
- *
- *     RED is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
- *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * REFilters: RNA Editing Filters Copyright (C) <2014> <Xing Li>
+ * 
+ * RED is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ * 
+ * RED is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along with this program. If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 
 package com.refilter.dataparser;
-
 
 import com.refilter.database.DatabaseManager;
 import com.refilter.utils.Indexer;
@@ -35,25 +29,26 @@ import java.util.Arrays;
 /**
  * Created by Administrator on 2014/9/29.
  * <p/>
- * VCFParser mainly parsers VCF file and insert all data into database. The class will delete old vcf table and create a new one.
+ * VCFParser mainly parsers VCF file and insert all data into database. The class will delete old vcf table and create a
+ * new one.
  */
 public class DNAVCFParser {
     public static final String VCF_CHROM = "CHROM";
     public static final String VCF_POS = "POS";
     private static final Logger logger = LoggerFactory.getLogger(DNAVCFParser.class);
-    //    public static final String VCF_ID = "ID";
-    //    public static final String VCF_REF = "REF";
-    //    public static final String VCF_ALT = "ALT";
-    //    public static final String VCF_QUAL = "QUAL";
-    //    public static final String VCF_FILTER = "FILTER";
-    //    public static final String VCF_INFO = "INFO";
-    //    public static final String VCF_FORMAT = "FORMAT";
-    //    private int chromColumn = 0;
-    //    private int posColumn = 1;
-    //    private int idColumn = 2;
+    // public static final String VCF_ID = "ID";
+    // public static final String VCF_REF = "REF";
+    // public static final String VCF_ALT = "ALT";
+    // public static final String VCF_QUAL = "QUAL";
+    // public static final String VCF_FILTER = "FILTER";
+    // public static final String VCF_INFO = "INFO";
+    // public static final String VCF_FORMAT = "FORMAT";
+    // private int chromColumn = 0;
+    // private int posColumn = 1;
+    // private int idColumn = 2;
     private int refColumn = 3;
     private int altColumn = 4;
-    //    private int qualColumn = 5;
+    // private int qualColumn = 5;
     private int filterColumn = 6;
     private int infoColumn = 7;
     private int formatColumnIndex = 8;
@@ -89,11 +84,13 @@ public class DNAVCFParser {
                     columnStrings = line.substring(1).split("\\t");
                     columnLength = columnStrings.length;
                     sampleNames = Arrays.copyOfRange(columnStrings, formatColumnIndex + 1, columnLength);
-                    tableBuilders.append(columnStrings[0]).append(" varchar(30),").append(columnStrings[1]).append(" int,")
-                            .append(columnStrings[2]).append(" varchar(30),").append(columnStrings[3]).append(" varchar(5),")
-                            .append(columnStrings[4]).append(" varchar(5),").append(columnStrings[5]).append(" float(10,2),")
-                            .append(columnStrings[6]).append(" text,").append(columnStrings[7]).append(" text,");
-                    continue;
+                    tableBuilders.append(columnStrings[0]).append(" varchar(30),").append(columnStrings[1])
+                        .append(" int,").append(columnStrings[2]).append(" varchar(30),").append(columnStrings[3])
+                        .append(" varchar(5),").append(columnStrings[4]).append(" varchar(5),")
+                        .append(columnStrings[5]).append(" float(10,2),").append(columnStrings[6]).append(" text,")
+                        .append(columnStrings[7]).append(" text,");
+                    return;
+                    // continue;
                 }
                 if (sampleNames == null) {
                     logger.error("There are no samples in this vcf file.");
@@ -104,7 +101,8 @@ public class DNAVCFParser {
 
                 for (int i = formatColumnIndex + 1; i < columnLength; i++) {
 
-                    if (!sections[altColumn].equals(".") || sections[i].contains(".") || !sections[filterColumn].toUpperCase().equals("PASS")) {
+                    if (!sections[altColumn].equals(".") || sections[i].contains(".")
+                        || !sections[filterColumn].toUpperCase().equals("PASS")) {
                         continue;
                     }
 
@@ -134,9 +132,9 @@ public class DNAVCFParser {
                         hasEstablishTable = true;
                     }
 
-                    //INSERT INTO table_name (col1, col2,...) VALUES (value1, value2,....)
+                    // INSERT INTO table_name (col1, col2,...) VALUES (value1, value2,....)
 
-                    //insert into
+                    // insert into
                     sqlClause = new StringBuilder("insert into ");
                     // insert into table_name (
                     sqlClause.append(tableName[i - formatColumnIndex - 1]).append("(");
@@ -177,7 +175,7 @@ public class DNAVCFParser {
                     // insert into table_name (col1,col2,...,colK,colK+1,colK+2,...,colN) values('value1','value2',...,
                     // 'valueK','valueK+1','valueK+2',...,'valueN')
                     sqlClause.append(")");
-                    //                System.out.println(lineCount+"\t"+sqlClause.toString());
+                    // System.out.println(lineCount+"\t"+sqlClause.toString());
                     databaseManager.executeSQL(sqlClause.toString());
 
                     if (++lineCount % DatabaseManager.COMMIT_COUNTS_PER_ONCE == 0) {

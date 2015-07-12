@@ -55,7 +55,7 @@
 
     <appender name="FILEINFO" class="ch.qos.logback.core.FileAppender">
 
-        <file>./refilter_logs/Information.log</file>
+        <file>./refilter/logs/information.log</file>
 
         <filter class="ch.qos.logback.classic.filter.LevelFilter">
             <level>ERROR</level>
@@ -71,7 +71,7 @@
 
     <appender name="FILEERROR" class="ch.qos.logback.core.FileAppender">
 
-        <file>./refilter_logs/Error.log</file>
+        <file>./refilter/error.log</file>
 
         <filter class="ch.qos.logback.classic.filter.LevelFilter">
             <level>ERROR</level>
