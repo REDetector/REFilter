@@ -13,14 +13,15 @@
 
 package com.refilter.dataparser;
 
+import java.sql.SQLException;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.refilter.database.DatabaseManager;
 import com.refilter.database.TableCreator;
 import com.refilter.utils.Indexer;
 import com.refilter.utils.Timer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.sql.SQLException;
 
 /**
  * Comprehensive phase we focus on base in exon we discard base in the rear or front of the sequence
@@ -40,11 +41,13 @@ public class RefGeneParser {
                 // "(chrom varchar(15),ref varchar(30),type varchar(9),begin int,end int,unuse1 float(8,6),unuse2
                 // varchar(5),unuse3 varchar(5),
                 // info varchar(100),index(chrom,type))");
-                TableCreator.createReferenceTable(tableName, new String[] { "bin", "name", "chrom", "strand",
-                    "txStart", "txEnd", "cdsStart", "cdsEnd", "exonCount", "exonStarts", "exonEnds", "score", "name2",
-                    "cdsStartStat", "cdsEndStat", "exonFrames" }, new String[] { "int", "varchar(255)", "varchar(255)",
-                    "varchar(1)", "int", "int", "int", "int", "int", "longblob", "longblob", "int", "varchar(255)",
-                    "varchar(8)", "varchar(8)", "longblob" }, Indexer.CHROM_START_END);
+                TableCreator.createReferenceTable(tableName,
+                    new String[] { "bin", "name", "chrom", "strand", "txStart", "txEnd", "cdsStart", "cdsEnd",
+                        "exonCount", "exonStarts", "exonEnds", "score", "name2", "cdsStartStat", "cdsEndStat",
+                        "exonFrames" },
+                    new String[] { "int", "varchar(255)", "varchar(255)", "varchar(1)", "int", "int", "int", "int",
+                        "int", "longblob", "longblob", "int", "varchar(255)", "varchar(8)", "varchar(8)", "longblob" },
+                    Indexer.CHROM_START_END);
             }
         } catch (SQLException e) {
             logger.error("Error create Splice Junction Table");
@@ -61,8 +64,8 @@ public class RefGeneParser {
                 databaseManager.executeSQL("load data local infile '" + refSeqGenePath + "' into table "
                     + refseqGeneTableName + " fields terminated" + " by '\t' lines terminated by '\n'");
             } catch (SQLException e) {
-                logger.error(
-                    "Error execute sql clause in " + RefGeneParser.class.getName() + ":loadRefSeqGeneTable().", e);
+                logger.error("Error execute sql clause in " + RefGeneParser.class.getName() + ":loadRefSeqGeneTable().",
+                    e);
             }
         }
         logger.info("End loading Ref Seq Gene File into database...\t" + Timer.getCurrentTime());

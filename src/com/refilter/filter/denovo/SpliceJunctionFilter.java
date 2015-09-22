@@ -41,8 +41,8 @@ public class SpliceJunctionFilter implements Filter {
         if (args == null || args.length == 0) {
             return;
         } else if (args.length != 1) {
-            throw new IllegalArgumentException("Args " + Arrays.asList(args)
-                + " for Splice Junction Filter are incomplete, please have a check");
+            throw new IllegalArgumentException(
+                "Args " + Arrays.asList(args) + " for Splice Junction Filter are incomplete, please have a check");
         }
         TableCreator.createFilterTable(previousTable, currentTable);
         logger.info("Start performing Splice Junction Filter...\t" + Timer.getCurrentTime());

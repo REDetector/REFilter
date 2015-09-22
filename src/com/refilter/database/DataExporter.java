@@ -104,9 +104,8 @@ public class DataExporter {
                         return;
                     }
                     pw.println("chr\tstart\tend\tref_allele\talt_allele");
-                    rs =
-                        databaseManager.query(currentTable, new String[] { "chrom", "pos", "ref", "alt" }, selection,
-                            selectionArgs);
+                    rs = databaseManager.query(currentTable, new String[] { "chrom", "pos", "ref", "alt" }, selection,
+                        selectionArgs);
                     try {
                         while (rs.next()) {
                             pw.println(rs.getString(1).substring(3) + "\t" + rs.getInt(2) + "\t" + rs.getInt(2) + "\t"
@@ -165,9 +164,8 @@ public class DataExporter {
         }
         br.close();
         for (StrandSite strandSite : strandSites) {
-            ResultSet rs =
-                databaseManager.query(DatabaseManager.SPLICE_JUNCTION_TABLE_NAME, new String[] { "strand" },
-                    "chrom=? and begin<=? and end>=?", new String[] { strandSite.chr, strandSite.pos, strandSite.pos });
+            ResultSet rs = databaseManager.query(DatabaseManager.SPLICE_JUNCTION_TABLE_NAME, new String[] { "strand" },
+                "chrom=? and begin<=? and end>=?", new String[] { strandSite.chr, strandSite.pos, strandSite.pos });
             if (rs.next()) {
                 strandSite.setStrand(rs.getString(1));
             } else {
@@ -192,9 +190,8 @@ public class DataExporter {
         }
         br.close();
         for (StrandSite strandSite : strandSites) {
-            ResultSet rs =
-                databaseManager.query(DatabaseManager.REFSEQ_GENE_TABLE_NAME, new String[] { "strand" }, "name2=?",
-                    new String[] { strandSite.name });
+            ResultSet rs = databaseManager.query(DatabaseManager.REFSEQ_GENE_TABLE_NAME, new String[] { "strand" },
+                "name2=?", new String[] { strandSite.name });
             if (rs.next()) {
                 strandSite.setStrand(rs.getString(1));
             } else {
@@ -206,14 +203,13 @@ public class DataExporter {
         p.close();
     }
 
-    public void exportDNAResults(String dnaVCF, String[] chrPoses, File outputFile) throws FileNotFoundException,
-        SQLException {
+    public void exportDNAResults(String dnaVCF, String[] chrPoses, File outputFile)
+        throws FileNotFoundException, SQLException {
         PrintWriter p = new PrintWriter(outputFile);
         p.println("chr\tpos\tDNA");
         for (int i = 0, len = chrPoses.length; i < len; i += 2) {
-            ResultSet rs =
-                databaseManager.query(dnaVCF, new String[] { "ref" }, "chrom=? and pos=?", new String[] { chrPoses[i],
-                    chrPoses[i + 1] });
+            ResultSet rs = databaseManager.query(dnaVCF, new String[] { "ref" }, "chrom=? and pos=?",
+                new String[] { chrPoses[i], chrPoses[i + 1] });
             if (rs.next()) {
                 p.println(chrPoses[i] + "\t" + chrPoses[i + 1] + "\t" + rs.getString(1));
             } else {

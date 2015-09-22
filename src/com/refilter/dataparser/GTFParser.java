@@ -41,9 +41,11 @@ public class GTFParser {
                 // "(chrom varchar(15),ref varchar(30),type varchar(9),begin int,end int,unuse1 float(8,6),unuse2
                 // varchar(5),unuse3 varchar(5),
                 // info varchar(100),index(chrom,type))");
-                TableCreator.createReferenceTable(tableName, new String[] { "chrom", "ref", "type", "begin", "end",
-                    "score", "strand", "frame", "info" }, new String[] { "varchar(30)", "varchar(30)", "varchar(10)",
-                    "int", "int", "float(8,6)", "varchar(1)", "varchar(1)", "varchar(100)" }, Indexer.CHROM_TYPE);
+                TableCreator.createReferenceTable(tableName,
+                    new String[] { "chrom", "ref", "type", "begin", "end", "score", "strand", "frame", "info" },
+                    new String[] { "varchar(30)", "varchar(30)", "varchar(10)", "int", "int", "float(8,6)",
+                        "varchar(1)", "varchar(1)", "varchar(100)" },
+                    Indexer.CHROM_TYPE);
             }
         } catch (SQLException e) {
             logger.error("Error create Splice Junction Table");
@@ -60,8 +62,8 @@ public class GTFParser {
                 databaseManager.executeSQL("load data local infile '" + spliceJunctionPath + "' into table "
                     + spliceJunctionTable + " fields terminated" + " by '\t' lines terminated by '\n'");
             } catch (SQLException e) {
-                logger.error(
-                    "Error execute sql clause in " + GTFParser.class.getName() + ":loadSpliceJunctionTable().", e);
+                logger.error("Error execute sql clause in " + GTFParser.class.getName() + ":loadSpliceJunctionTable().",
+                    e);
             }
         }
         logger.info("End loading Gene Annotation File into database...\t" + Timer.getCurrentTime());

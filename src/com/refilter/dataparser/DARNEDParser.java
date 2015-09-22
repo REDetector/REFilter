@@ -41,9 +41,11 @@ public class DARNEDParser {
     private void createDARNEDTable(final String tableName) {
         try {
             if (!databaseManager.existTable(tableName)) {
-                // "(chrom varchar(15),coordinate int,strand varchar(5),inchr varchar(5), inrna varchar(5) ,index(chrom,coordinate))");
-                TableCreator.createReferenceTable(tableName, new String[] { "chrom", "coordinate", "strand", "inchr",
-                    "inrna" }, new String[] { "varchar(30)", "int", "varchar(5)", "varchar(5)", "varchar(5)" },
+                // "(chrom varchar(15),coordinate int,strand varchar(5),inchr varchar(5), inrna varchar(5)
+                // ,index(chrom,coordinate))");
+                TableCreator.createReferenceTable(tableName,
+                    new String[] { "chrom", "coordinate", "strand", "inchr", "inrna" },
+                    new String[] { "varchar(30)", "int", "varchar(5)", "varchar(5)", "varchar(5)" },
                     Indexer.CHROM_COORDINATE);
             }
         } catch (SQLException e) {

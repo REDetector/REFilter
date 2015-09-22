@@ -87,9 +87,9 @@ public class DNAVCFParser {
                     sampleNames = Arrays.copyOfRange(columnStrings, formatColumnIndex + 1, columnLength);
                     tableBuilders.append(columnStrings[0]).append(" varchar(30),").append(columnStrings[1])
                         .append(" int,").append(columnStrings[2]).append(" varchar(30),").append(columnStrings[3])
-                        .append(" varchar(5),").append(columnStrings[4]).append(" varchar(5),")
-                        .append(columnStrings[5]).append(" float(10,2),").append(columnStrings[6]).append(" text,")
-                        .append(columnStrings[7]).append(" text,");
+                        .append(" varchar(5),").append(columnStrings[4]).append(" varchar(5),").append(columnStrings[5])
+                        .append(" float(10,2),").append(columnStrings[6]).append(" text,").append(columnStrings[7])
+                        .append(" text,");
                     return;
                     // continue;
                 }

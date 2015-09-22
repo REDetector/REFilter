@@ -42,8 +42,8 @@ public class DNARNAFilter implements Filter {
         if (args == null || args.length == 0) {
             return;
         } else if (args.length != 2) {
-            throw new IllegalArgumentException("Args " + Arrays.asList(args)
-                + " for DNA-RNA Filter are incomplete, please have a check");
+            throw new IllegalArgumentException(
+                "Args " + Arrays.asList(args) + " for DNA-RNA Filter are incomplete, please have a check");
         }
         TableCreator.createFilterTable(previousTable, currentTable);
         logger.info("Start performing DNA-RNA Filter...\t" + Timer.getCurrentTime());
@@ -51,11 +51,11 @@ public class DNARNAFilter implements Filter {
         String editingType = args[1];
         String negativeType = NegativeType.getNegativeStrandEditingType(editingType);
         try {
-            databaseManager.executeSQL("insert into " + currentTable + " select * from " + previousTable
-                + " where exists (select chrom from " + dnaVcfTable + " where (" + dnaVcfTable + ".chrom="
-                + previousTable + ".chrom and " + dnaVcfTable + ".pos=" + previousTable + ".pos and (" + dnaVcfTable
-                + ".ref='" + editingType.charAt(0) + "' or  " + dnaVcfTable + ".ref='" + negativeType.charAt(0)
-                + "')))");
+            databaseManager.executeSQL(
+                "insert into " + currentTable + " select * from " + previousTable + " where exists (select chrom from "
+                    + dnaVcfTable + " where (" + dnaVcfTable + ".chrom=" + previousTable + ".chrom and " + dnaVcfTable
+                    + ".pos=" + previousTable + ".pos and (" + dnaVcfTable + ".ref='" + editingType.charAt(0) + "' or  "
+                    + dnaVcfTable + ".ref='" + negativeType.charAt(0) + "')))");
         } catch (SQLException e) {
             logger.error("Error execute sql clause in " + DNARNAFilter.class.getName() + ":performFilter()", e);
         }

@@ -42,10 +42,10 @@ public class RepeatRegionsFilter implements Filter {
         logger.info("Start performing Repeat Regions Filter...\t" + Timer.getCurrentTime());
         String repeatTable = DatabaseManager.REPEAT_MASKER_TABLE_NAME;
         try {
-            databaseManager.executeSQL("insert into " + currentTable + " select * from " + previousTable
-                + " where not exists (select * from " + repeatTable + " where (" + repeatTable + ".chrom= "
-                + previousTable + ".chrom and  " + repeatTable + ".begin<=" + previousTable + ".pos and " + repeatTable
-                + ".end>=" + previousTable + ".pos)) ");
+            databaseManager.executeSQL(
+                "insert into " + currentTable + " select * from " + previousTable + " where not exists (select * from "
+                    + repeatTable + " where (" + repeatTable + ".chrom= " + previousTable + ".chrom and  " + repeatTable
+                    + ".begin<=" + previousTable + ".pos and " + repeatTable + ".end>=" + previousTable + ".pos)) ");
 
             logger.info("Start finding sites in Alu Regions...\t" + Timer.getCurrentTime());
             String tempTable = RandomStringGenerator.getRandomString(10);

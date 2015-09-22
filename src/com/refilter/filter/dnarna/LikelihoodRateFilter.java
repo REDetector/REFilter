@@ -45,19 +45,18 @@ public class LikelihoodRateFilter implements Filter {
         if (args == null || args.length == 0) {
             return;
         } else if (args.length != 2) {
-            throw new IllegalArgumentException("Args " + Arrays.asList(args)
-                + " for Likelihood Rate Test Filter are incomplete, please have a check");
+            throw new IllegalArgumentException(
+                "Args " + Arrays.asList(args) + " for Likelihood Rate Test Filter are incomplete, please have a check");
         }
         String dnaVcfTable = args[0];
         double threshold = Double.parseDouble(args[1]);
         TableCreator.createFilterTable(previousTable, currentTable);
         logger.info("Start performing Likelihood Rate Test Filter...\t" + Timer.getCurrentTime());
         try {
-            ResultSet rs =
-                databaseManager.query("select " + previousTable + ".chrom," + previousTable + ".pos," + previousTable
-                    + ".AD," + "" + dnaVcfTable + ".qual from " + previousTable + "," + dnaVcfTable + " WHERE "
-                    + previousTable + ".chrom=" + dnaVcfTable + ".chrom AND " + previousTable + ".pos=" + dnaVcfTable
-                    + ".pos");
+            ResultSet rs = databaseManager
+                .query("select " + previousTable + ".chrom," + previousTable + ".pos," + previousTable + ".AD," + ""
+                        + dnaVcfTable + ".qual from " + previousTable + "," + dnaVcfTable + " WHERE " + previousTable
+                        + ".chrom=" + dnaVcfTable + ".chrom AND " + previousTable + ".pos=" + dnaVcfTable + ".pos");
             List<SiteBean> siteBeans = new ArrayList<SiteBean>();
             while (rs.next()) {
                 String chr = rs.getString(1);

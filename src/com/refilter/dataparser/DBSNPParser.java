@@ -43,8 +43,8 @@ public class DBSNPParser {
         try {
             if (!databaseManager.existTable(tableName)) {
                 // chrom varchar(15),pos int,index(chrom,pos);
-                TableCreator.createReferenceTable(tableName, new String[] { "chrom", "pos" }, new String[] {
-                    "varchar(30)", "int" }, Indexer.CHROM_POSITION);
+                TableCreator.createReferenceTable(tableName, new String[] { "chrom", "pos" },
+                    new String[] { "varchar(30)", "int" }, Indexer.CHROM_POSITION);
             }
         } catch (SQLException e) {
             System.err.println("Error create dbSNP table");

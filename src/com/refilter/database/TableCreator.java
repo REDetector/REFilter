@@ -40,14 +40,15 @@ public class TableCreator {
         databaseManager.deleteTable(darnedResultTable);
         createFilterTable(refTable, darnedResultTable);
         try {
-            databaseManager.executeSQL("alter table " + darnedResultTable
-                + " add level float,add pvalue float,add fdr float;");
+            databaseManager
+                .executeSQL("alter table " + darnedResultTable + " add level float,add pvalue float,add fdr float;");
         } catch (SQLException e) {
             logger.error("Can not create Fisher Exact Test Table.", e);
         }
     }
 
-    public static void createReferenceTable(String tableName, String[] columnNames, String[] columnParams, String index) {
+    public static void createReferenceTable(String tableName, String[] columnNames, String[] columnParams,
+        String index) {
         if (columnNames == null || columnParams == null || columnNames.length == 0
             || columnNames.length != columnParams.length) {
             throw new IllegalArgumentException("Column names and column parameters can't not be null or zero-length.");

@@ -57,8 +57,8 @@ public class FisherExactTestFilter implements Filter {
                 // float(8,2),7.FILTER text,8.INFO text,9.GT text,
                 // 10.AD text,11.DP text,12.GQ text,13.PL text,14.alu varchar(1)
                 PValueInfo info =
-                    new PValueInfo(rs.getString(1), rs.getInt(2), rs.getString(3), rs.getString(4).charAt(0), rs
-                        .getString(5).charAt(0), rs.getFloat(6), rs.getString(7), rs.getString(8), rs.getString(9),
+                    new PValueInfo(rs.getString(1), rs.getInt(2), rs.getString(3), rs.getString(4).charAt(0),
+                        rs.getString(5).charAt(0), rs.getFloat(6), rs.getString(7), rs.getString(8), rs.getString(9),
                         rs.getString(10), rs.getString(11), rs.getString(12), rs.getString(13), rs.getString(14));
                 String[] sections = info.getAd().split("/");
                 info.refCount = Integer.parseInt(sections[0]);
@@ -132,8 +132,8 @@ public class FisherExactTestFilter implements Filter {
                     + "(chrom,pos,id,ref,alt,qual,filter,info,gt,ad,dp,gq,pl,alu,level,pvalue) " + "values( "
                     + pValueInfo.toString() + "," + dF.format(level) + "," + pValue + ")");
             } catch (SQLException e) {
-                logger.error("Error execute sql clause in " + FisherExactTestFilter.class.getName()
-                    + ":executeFETFilter()", e);
+                logger.error(
+                    "Error execute sql clause in " + FisherExactTestFilter.class.getName() + ":executeFETFilter()", e);
                 return new ArrayList<PValueInfo>();
             }
         }
@@ -146,10 +146,10 @@ public class FisherExactTestFilter implements Filter {
         if (args == null || args.length == 0) {
             return;
         } else if (args.length != 4) {
-            logger.error("Args " + Arrays.asList(args)
-                + " for Fisher's Exact Test Filter are incomplete, please have a check");
-            throw new IllegalArgumentException("Args " + Arrays.asList(args)
-                + " for Fisher's Exact Test Filter are incomplete, please have a check");
+            logger.error(
+                "Args " + Arrays.asList(args) + " for Fisher's Exact Test Filter are incomplete, please have a check");
+            throw new IllegalArgumentException(
+                "Args " + Arrays.asList(args) + " for Fisher's Exact Test Filter are incomplete, please have a check");
         }
         String rScript = args[0];
         double pvalueThreshold = Double.parseDouble(args[1]);

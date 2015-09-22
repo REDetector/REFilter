@@ -125,8 +125,8 @@ public class DatabaseManager {
         List<String> columnNames = new ArrayList<String>();
         useDatabase(database);
         Statement stmt = con.createStatement();
-        ResultSet rs =
-            stmt.executeQuery("select COLUMN_NAME from information_schema.columns where table_name='" + tableName + "'");
+        ResultSet rs = stmt
+            .executeQuery("select COLUMN_NAME from information_schema.columns where table_name='" + tableName + "'");
         while (rs.next()) {
             if (!columnNames.contains(rs.getString(1))) {
                 columnNames.add(rs.getString(1));

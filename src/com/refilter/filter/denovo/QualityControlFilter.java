@@ -44,8 +44,8 @@ public class QualityControlFilter implements Filter {
         if (args == null || args.length == 0) {
             return;
         } else if (args.length != 2) {
-            throw new IllegalArgumentException("Args " + Arrays.asList(args)
-                + " for Quality Control Filter are incomplete, please have a check");
+            throw new IllegalArgumentException(
+                "Args " + Arrays.asList(args) + " for Quality Control Filter are incomplete, please have a check");
         }
         double quality = Double.parseDouble(args[0]);
         int depth = Integer.parseInt(args[1]);

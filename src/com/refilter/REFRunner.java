@@ -242,8 +242,7 @@ public class REFRunner {
         logger.info("Start connecting the database...");
         DatabaseManager manager = DatabaseManager.getInstance();
         if (!manager.connectDatabase(HOST, PORT, USER, PWD)) {
-            logger
-                .error(
+            logger.error(
                     "Sorry, fail to connect to the database. You may input one of the wrong database host, port, user name or password.",
                     new SQLException());
             return;
@@ -353,8 +352,8 @@ public class REFRunner {
                     List<String> tableNames = DatabaseManager.getInstance().getCurrentTables(DATABASE);
                     for (String tableName : tableNames) {
                         if (tableName.endsWith(DatabaseManager.DNA_VCF_RESULT_TABLE_NAME)) {
-                            dataExporter.exportDNAResults(tableName, QUERY.split(","), new File(resultPath
-                                + File.separator + "dna_info_" + tableName + ".txt"));
+                            dataExporter.exportDNAResults(tableName, QUERY.split(","),
+                                new File(resultPath + File.separator + "dna_info_" + tableName + ".txt"));
                         }
                     }
                 } catch (SQLException e) {
@@ -562,10 +561,7 @@ public class REFRunner {
     }
 
     public static String getVersion() {
-        return "REFilters version 0.0.1 (2014-12-17)\n"
-            + "\n"
-            + "Copyright (C) <2014>  <Xing Li>\n"
-            + "\n"
+        return "REFilters version 0.0.1 (2014-12-17)\n" + "\n" + "Copyright (C) <2014>  <Xing Li>\n" + "\n"
             + "REFilter is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.\n"
             + "\n"
             + "REFilter is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.\n"
@@ -575,61 +571,37 @@ public class REFRunner {
 
     public static String getHelp() {
         return "Usage: java -jar jarfile [-h|--help] [-v|--version] [-H|--host[=127.0.0.1]] [-p|--port[=3306]] [-u|--user[=root]] [-P|--pwd[=root]] [-m|--mode[=dnarna]] [-i|--input] [-o|--output[=./]] [-e|--export[=all]] [--rnavcf] [--dnavcf] [--darned] [--splice] [--repeat] [--dbsnp]\n"
-            + "\n"
-            + "The most commonly used REFilters commands are:\n"
+            + "\n" + "The most commonly used REFilters commands are:\n"
             + "\t-h, --help   \t\t\tPrint short help message and exit;\n"
             + "\t-v, --version \t\t\tPrint version info and exit;\n"
             + "\t-H, --host=127.0.0.1    The host address of MySQL database;\n"
-            + "\t-p, --port=3306    \t\tThe port used in MySQL;\n"
-            + "\t-u, --user=root    \t\tMySQL user name;\n"
+            + "\t-p, --port=3306    \t\tThe port used in MySQL;\n" + "\t-u, --user=root    \t\tMySQL user name;\n"
             + "\t-P, --pwd=root     \t\tMySQL password of user;\n"
             + "\t-m, --mode=dnarna  \t\tTell the program if it is denovo mode or DNARNA mode;\n"
             + "\t-i, --input  \t\t\tInput all required files in order (i.e., RNA VCF File, DNA VCF File, DARNED Database, Gene Annotation File, RepeatMasker Database File, dbSNP Database File) instead of single input, each file should be divided with ',' and there should not be blank with each file;\n"
             + "\t-o, --output=./    \t\tSet export path for the results in database, default path is current directory;\n"
             + "\t-e, --export=all  \t\tExport the needed columns in database, which must be the column name of a table in database, the column names should be divided by ',';\n"
-            + "\t--rnavcf  \t\t\t\tFile path of RNA VCF file;\n"
-            + "\t--dnavcf  \t\t\t\tFile path of DNA VCF file;\n"
+            + "\t--rnavcf  \t\t\t\tFile path of RNA VCF file;\n" + "\t--dnavcf  \t\t\t\tFile path of DNA VCF file;\n"
             + "\t--darned  \t\t\t\tFile path of DARNED database;\n"
             + "\t--splice  \t\t\t\tFile path of annotation genes like \"gene.gft\";\n"
             + "\t--repeat  \t\t\t\tFile path of Repeat Masker database;\n"
-            + "\t--dbsnp   \t\t\t\tFile path of dbSNP database;\n"
-            + "\t-r, --rscript \t\t\tFile path of RScript.\n"
-            + "\n"
-            + "Example:\n"
-            + "1) In Windows, use '--' patterns.\n"
+            + "\t--dbsnp   \t\t\t\tFile path of dbSNP database;\n" + "\t-r, --rscript \t\t\tFile path of RScript.\n"
+            + "\n" + "Example:\n" + "1) In Windows, use '--' patterns.\n"
             + "java -jar E:\\Workspace\\REFilters\\out\\artifacts\\REFilters\\REFilters.jar ^\n"
-            + "--host=127.0.0.1 ^\n"
-            + "--port=3306 ^\n"
-            + "--user=root ^\n"
-            + "--pwd=123456 ^\n"
+            + "--host=127.0.0.1 ^\n" + "--port=3306 ^\n" + "--user=root ^\n" + "--pwd=123456 ^\n"
             + "--mode=denovo --input=D:\\Downloads\\Documents\\BJ22.snvs.hard.filtered.vcf,D:\\Downloads\\Documents\\hg19.txt,D:\\Downloads\\Documents\\genes.gtf,D:\\Downloads\\Documents\\hg19.fa.out,D:\\Downloads\\Documents\\dbsnp_138.hg19.vcf ^\n"
-            + "--output=E:\\Workspace\\REFilters\\Results ^\n"
-            + "--export=all ^\n"
-            + "--rscript=C:\\R\\R-3.1.1\\bin\\Rscript.exe\n"
-            + "\n"
-            + "2) In Windows, use '-' patterns.\n"
-            + "java -jar E:\\Workspace\\REFilters\\out\\artifacts\\REFilters\\REFilters.jar ^\n"
-            + "-H 127.0.0.1 ^\n"
-            + "-p 3306 ^\n"
-            + "-u root ^\n"
-            + "-P 123456 ^\n"
-            + "-m dnarna ^\n"
+            + "--output=E:\\Workspace\\REFilters\\Results ^\n" + "--export=all ^\n"
+            + "--rscript=C:\\R\\R-3.1.1\\bin\\Rscript.exe\n" + "\n" + "2) In Windows, use '-' patterns.\n"
+            + "java -jar E:\\Workspace\\REFilters\\out\\artifacts\\REFilters\\REFilters.jar ^\n" + "-H 127.0.0.1 ^\n"
+            + "-p 3306 ^\n" + "-u root ^\n" + "-P 123456 ^\n" + "-m dnarna ^\n"
             + "-i D:\\Downloads\\Documents\\BJ22.snvs.hard.filtered.vcf,D:\\Downloads\\Documents\\BJ22_sites.hard.filtered.vcf,D:\\Downloads\\Documents\\hg19.txt,D:\\Downloads\\Documents\\genes.gtf,D:\\Downloads\\Documents\\hg19.fa.out,D:\\Downloads\\Documents\\dbsnp_138.hg19.vcf ^\n"
-            + "-o E:\\Workspace\\REFilters\\Results ^\n"
-            + "-e chrom,pos,level ^\n"
-            + "-r C:\\R\\R-3.1.1\\bin\\Rscript.exe\n"
-            + "\n"
-            + "3) In CentOS, use '-' and '--' patterns.\n"
-            + "java -jar /home/seq/softWare/RED/REFilter.jar \n"
-            + "-h 127.0.0.1 \\\n"
-            + "-p 3306 \\\n"
-            + "-u seq \\\n"
-            + "-P 123456 \\\n"
-            + "-m denovo \\\n"
+            + "-o E:\\Workspace\\REFilters\\Results ^\n" + "-e chrom,pos,level ^\n"
+            + "-r C:\\R\\R-3.1.1\\bin\\Rscript.exe\n" + "\n" + "3) In CentOS, use '-' and '--' patterns.\n"
+            + "java -jar /home/seq/softWare/RED/REFilter.jar \n" + "-h 127.0.0.1 \\\n" + "-p 3306 \\\n" + "-u seq \\\n"
+            + "-P 123456 \\\n" + "-m denovo \\\n"
             + "--rnavcf=/data/rnaEditing/GM12878/GM12878.snvs.hard.filtered.vcf \\\n"
-            + "--repeat=/home/seq/softWare/RED/hg19.fa.out \\\n"
-            + "--splice=/home/seq/softWare/RED/genes.gtf \\\n"
-            + "--dbsnp=/home/seq/softWare/RED/dbsnp_138.hg19.vcf \\\n"
-            + "--darned=/home/seq/softWare/RED/hg19.txt \\\n" + "--rscript=/usr/bin/Rscript";
+            + "--repeat=/home/seq/softWare/RED/hg19.fa.out \\\n" + "--splice=/home/seq/softWare/RED/genes.gtf \\\n"
+            + "--dbsnp=/home/seq/softWare/RED/dbsnp_138.hg19.vcf \\\n" + "--darned=/home/seq/softWare/RED/hg19.txt \\\n"
+            + "--rscript=/usr/bin/Rscript";
     }
 }

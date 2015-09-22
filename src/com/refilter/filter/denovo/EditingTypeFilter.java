@@ -41,8 +41,8 @@ public class EditingTypeFilter implements Filter {
         if (args == null || args.length == 0) {
             return;
         } else if (args.length != 1) {
-            throw new IllegalArgumentException("Args " + Arrays.asList(args)
-                + " for Editing Type Filter are incomplete, please have a check");
+            throw new IllegalArgumentException(
+                "Args " + Arrays.asList(args) + " for Editing Type Filter are incomplete, please have a check");
         }
         TableCreator.createFilterTable(previousTable, currentTable);
         logger.info("Start executing Editing Type Filter..." + Timer.getCurrentTime());
