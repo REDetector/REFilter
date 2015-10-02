@@ -44,6 +44,7 @@ import com.refilter.utils.Timer;
  * A command line tool to run RNA Editing Filters.
  */
 public class REFRunner {
+    private static Logger logger = LoggerFactory.getLogger(REFRunner.class);
     public static String HOST = "127.0.0.1";
     public static String PORT = "3306";
     public static String USER = "root";
@@ -66,7 +67,6 @@ public class REFRunner {
     public static String QUERY = "";
     public static String EXTRACT = "";
     public static String DELETE = "";
-    private static Logger logger = LoggerFactory.getLogger(REFRunner.class);
 
     static {
         LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
@@ -243,8 +243,8 @@ public class REFRunner {
         DatabaseManager manager = DatabaseManager.getInstance();
         if (!manager.connectDatabase(HOST, PORT, USER, PWD)) {
             logger.error(
-                    "Sorry, fail to connect to the database. You may input one of the wrong database host, port, user name or password.",
-                    new SQLException());
+                "Sorry, fail to connect to the database. You may input one of the wrong database host, port, user name or password.",
+                new SQLException());
             return;
         }
         logger.info("Connect database successfully.");

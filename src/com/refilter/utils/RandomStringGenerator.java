@@ -25,7 +25,7 @@ public class RandomStringGenerator {
 
     public static String getRandomString(int length) {
         if (length < 1) {
-            return null;
+            return "";
         }
         if (randGen == null) {
             randGen = new Random();

@@ -50,12 +50,25 @@ public class DNARNAFilter implements Filter {
         String dnaVcfTable = args[0];
         String editingType = args[1];
         String negativeType = NegativeType.getNegativeStrandEditingType(editingType);
+        String darnedTable = DatabaseManager.DARNED_DATABASE_TABLE_NAME;
+        /**
+         * chrom | coordinate | strand | inchr | inrna
+         */
         try {
+            logger.info("Start selecting data from DNA VCF table...\t" + Timer.getCurrentTime());
             databaseManager.executeSQL(
                 "insert into " + currentTable + " select * from " + previousTable + " where exists (select chrom from "
                     + dnaVcfTable + " where (" + dnaVcfTable + ".chrom=" + previousTable + ".chrom and " + dnaVcfTable
                     + ".pos=" + previousTable + ".pos and (" + dnaVcfTable + ".ref='" + editingType.charAt(0) + "' or  "
                     + dnaVcfTable + ".ref='" + negativeType.charAt(0) + "')))");
+
+            databaseManager.executeSQL(
+                "insert into " + currentTable + " select * from " + previousTable + " where exists (select chrom from "
+                    + darnedTable + " where (" + darnedTable + ".chrom=" + previousTable + ".chrom and " + darnedTable
+                    + ".coordinate=" + previousTable + ".pos and (" + darnedTable + ".inchr='" + editingType.charAt(0)
+                    + "' or  " + darnedTable + ".inchr='" + negativeType.charAt(0) + "')))");
+
+            logger.info("End selecting data from DNA VCF table...\t" + Timer.getCurrentTime());
         } catch (SQLException e) {
             logger.error("Error execute sql clause in " + DNARNAFilter.class.getName() + ":performFilter()", e);
         }
